@@ -1,0 +1,1348 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<meta name="description" content="Mission Calculo, application de calcul mental pour Octave.">
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black"><meta name="apple-mobile-web-app-title" content="Calculo">
+<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png"><link rel="icon" type="image/png" href="icon-192.png">
+<title>Mission Calculo</title>
+<meta name="theme-color" content="#0A1330">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap">
+<style>
+/* Concept : une carte spatiale verticale, des planetes a conquérir, boutons épais façon jeu, nuit bleue et rouge signal. */
+:root{
+  --bg:#0A1330; --bg2:#101C47; --surface:#16255C; --surface2:#1F3175; --line:#33489B;
+  --fg:#F4F6FF; --muted:#BAC5F3;
+  --blue:#2A5CE6; --blue-d:#173FB0; --blue-l:#7C9EFF;
+  --red:#D62839; --red-d:#8F1422; --red-l:#FF8791;
+  --gold:#FFC93C; --gold-d:#B9861A;
+  --help-bg:#E7E3FF; --help-fg:#241D74; --help-line:#7A6BE8; --good-bg:#DCE7FF; --good-fg:#0C2A8A; --bad-bg:#FFDDE1; --bad-fg:#7A0F1B;
+  --f-display:'Baloo 2','Trebuchet MS',system-ui,sans-serif;
+  --f-body:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:700 16px/1.45 var(--f-body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  padding-block:0;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+   radial-gradient(1.6px 1.6px at 20px 30px,#fff,transparent),
+   radial-gradient(1px 1px at 90px 80px,#cfd8ff,transparent),
+   radial-gradient(2px 2px at 160px 20px,#fff,transparent),
+   radial-gradient(1px 1px at 60px 140px,#fff,transparent),
+   radial-gradient(1.6px 1.6px at 130px 120px,#ffb3ba,transparent),
+   radial-gradient(ellipse 80% 40% at 50% -8%,rgba(42,92,230,.38),transparent 70%);
+  background-size:200px 180px,200px 180px,200px 180px,200px 180px,200px 180px,100% 100%;opacity:.8;
+  animation:twinkle 6s ease-in-out infinite alternate}
+@keyframes twinkle{from{opacity:.55}to{opacity:.9}}
+h1,h2,h3{font-family:var(--f-display);margin:0;line-height:1.1;text-wrap:balance}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--gold);outline-offset:3px;border-radius:12px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.app{max-width:480px;margin:0 auto;padding-block:16px 120px}
+main{outline:none}
+.noscroll{overflow:hidden}
+
+/* boutons épais */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;min-height:56px;padding:12px 22px;border:0;border-radius:18px;
+  background:var(--blue);color:#fff;font:800 17px var(--f-display);letter-spacing:.06em;text-transform:uppercase;
+  box-shadow:0 5px 0 var(--blue-d);transition:transform .08s,box-shadow .08s}
+.btn:active:not(:disabled){transform:translateY(4px);box-shadow:0 1px 0 var(--blue-d)}
+.btn:disabled{background:#2A3A7E;color:#8D9BD6;box-shadow:0 5px 0 #1A2760;cursor:not-allowed}
+.btn.red{background:var(--red);box-shadow:0 5px 0 var(--red-d)}
+.btn.red:active:not(:disabled){box-shadow:0 1px 0 var(--red-d)}
+.btn.ghost{background:transparent;color:var(--blue-l);box-shadow:none;border:2px solid var(--line)}
+.btn.block{width:100%}
+.icon-btn{width:48px;height:48px;border-radius:14px;border:0;background:transparent;display:grid;place-items:center;color:var(--muted)}
+.icon-btn svg{width:26px;height:26px}
+svg.i{width:1em;height:1em;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+svg.i.fill{fill:currentColor;stroke:none}
+
+/* en-tête */
+.top{display:flex;align-items:center;gap:12px}
+.top .hi{flex:1;min-width:0}
+.top h1{font-size:26px}
+.chips{display:flex;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:var(--surface);border:2px solid var(--line);font:800 17px var(--f-display);font-variant-numeric:tabular-nums}
+.chip svg{width:20px;height:20px}
+.chip.fire svg{color:var(--red-l)} .chip.star svg{color:var(--gold)}
+.lvl{margin:14px 0 4px;display:flex;flex-direction:column;gap:6px}
+.lvl-row{display:flex;justify-content:space-between;font-size:14px;color:var(--muted)}
+.lvl-row b{color:var(--fg)}
+.meter{height:12px;border-radius:99px;background:var(--surface);border:2px solid var(--line);overflow:hidden}
+.meter i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--blue),var(--blue-l));transition:width .5s}
+.meter.red i{background:linear-gradient(90deg,var(--red),var(--red-l))}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:22px;padding:16px}
+.goal{margin-top:12px;display:grid;gap:8px}
+.goal .row{display:flex;justify-content:space-between;align-items:center;font-size:15px}
+.goal .row span:last-child{color:var(--muted);font-variant-numeric:tabular-nums}
+.speech{margin:18px 0 6px;display:flex;align-items:center;gap:12px}
+.speech .b{position:relative;flex:1;background:var(--fg);color:#0A1330;border-radius:18px;padding:12px 14px;font-size:16px}
+.speech .b::before{content:"";position:absolute;left:-9px;top:50%;margin-top:-9px;border:9px solid transparent;border-left:0;border-right-color:var(--fg)}
+.place{margin:14px 0 0;display:flex;gap:14px;align-items:center;border-color:var(--red)}
+.place p{margin:0;flex:1;font-size:15px}
+.place .btn{min-height:46px;padding:8px 14px;font-size:14px}
+
+/* carte */
+.mapwrap{position:relative;width:100%;margin-top:6px}
+.mapwrap svg.path{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.stop{position:absolute;transform:translate(-50%,-50%);width:150px;display:flex;flex-direction:column;align-items:center;gap:2px;text-align:center}
+.planet{position:relative;width:92px;height:92px;border:0;background:none;padding:0;border-radius:50%;display:grid;place-items:center;transition:transform .12s}
+.planet svg.pl{width:100%;height:100%;filter:drop-shadow(0 6px 0 rgba(0,0,0,.35))}
+.planet:active:not(:disabled){transform:translateY(4px) scale(.97)}
+.planet.cur::after{content:"";position:absolute;inset:-8px;border-radius:50%;border:3px solid var(--red-l);animation:pulse 1.8s ease-out infinite}
+@keyframes pulse{from{transform:scale(.88);opacity:1}to{transform:scale(1.18);opacity:0}}
+.planet:disabled{cursor:not-allowed;filter:grayscale(1) brightness(.55)}
+.planet .lock{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:30px}
+.stop .nm{font:800 18px var(--f-display);text-shadow:0 0 6px var(--bg),0 0 10px var(--bg)}
+.stop .tt{font-size:13px;color:var(--muted);line-height:1.25;text-shadow:0 0 6px var(--bg),0 0 10px var(--bg)}
+.stars3{display:flex;gap:2px;font-size:16px;color:#3A4C9E}
+.stars3 .on{color:var(--gold)}
+.go-bubble{position:absolute;top:-36px;left:50%;transform:translateX(-50%);background:var(--fg);color:#0A1330;font:800 14px var(--f-display);letter-spacing:.06em;text-transform:uppercase;padding:5px 12px;border-radius:12px;white-space:nowrap;animation:bob 1.6s ease-in-out infinite;pointer-events:none}
+.go-bubble::after{content:"";position:absolute;left:50%;bottom:-7px;margin-left:-7px;border:7px solid transparent;border-bottom:0;border-top-color:var(--fg)}
+@keyframes bob{50%{transform:translate(-50%,-4px)}}
+.mf{animation:float 3.2s ease-in-out infinite;transform-origin:50% 60%}
+@keyframes float{50%{transform:translateY(-3px)}}
+
+/* navigation */
+.nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;
+  padding:8px max(12px,env(safe-area-inset-right,0px)) calc(8px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px));
+  background:linear-gradient(to top,var(--bg) 70%,transparent)}
+.nav .in{display:flex;gap:8px;width:100%;max-width:480px;background:var(--bg2);border:2px solid var(--line);border-radius:22px;padding:6px}
+.tab{flex:1;min-height:56px;border:2px solid transparent;border-radius:16px;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;color:var(--muted);font:800 13px var(--f-display);letter-spacing:.05em;text-transform:uppercase}
+.tab svg{width:26px;height:26px}
+.tab[aria-current="page"]{background:#1B3AA0;border-color:var(--blue-l);color:#fff}
+
+/* pages secondaires */
+.hero{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:18px 0 6px}
+.hero h1{font-size:34px}
+.hero p{margin:0;color:var(--muted);max-width:30ch}
+.rec{display:flex;align-items:center;gap:10px;padding:12px 18px;border-radius:18px;background:var(--surface);border:2px solid var(--line);font:800 20px var(--f-display)}
+.rec svg{color:var(--gold);width:26px;height:26px}
+.sect{margin-top:24px;display:grid;gap:12px}
+.sect h2{font-size:22px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{padding:12px 14px;border-radius:16px;background:var(--surface);border:2px solid var(--line)}
+.stat b{display:block;font:800 26px var(--f-display);font-variant-numeric:tabular-nums}
+.stat span{font-size:14px;color:var(--muted)}
+.heatwrap{overflow-x:auto;border-radius:16px}
+table.heat{border-collapse:separate;border-spacing:3px;width:100%;min-width:320px;font-size:13px;font-variant-numeric:tabular-nums}
+table.heat th{font:800 13px var(--f-display);color:var(--muted);padding:4px 0}
+table.heat td{height:34px;text-align:center;border-radius:8px;border:2px solid transparent;background:var(--surface);color:var(--muted)}
+td[data-s="mid"]{background:#2C4AB0;color:#fff;border-color:#2C4AB0}
+td[data-s="strong"]{background:var(--blue);color:#fff;border-color:var(--blue-l)}
+td[data-s="weak"]{background:#5A1220;color:#fff;border:2px dashed var(--red-l)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:16px;height:16px;border-radius:5px;display:inline-block;border:2px solid transparent}
+.list{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.list li{display:flex;justify-content:space-between;gap:12px;padding:10px 14px;border-radius:14px;background:var(--surface);border:2px solid var(--line);font-size:15px}
+.list li span:last-child{color:var(--muted)}
+.set{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:56px}
+.set label{flex:1}
+.txt{width:150px;min-height:48px;border-radius:14px;border:2px solid var(--line);background:var(--bg2);color:var(--fg);padding:8px 12px;font:800 17px var(--f-body)}
+.sw{position:relative;width:68px;height:44px;border-radius:99px;border:2px solid var(--line);background:var(--bg2);padding:0;flex:none}
+.sw::after{content:"";position:absolute;top:4px;left:4px;width:32px;height:32px;border-radius:50%;background:var(--muted);transition:transform .15s}
+.sw[aria-checked="true"]{background:var(--blue);border-color:var(--blue-l)}
+.sw[aria-checked="true"]::after{transform:translateX(24px);background:#fff}
+.small{font-size:14px;color:var(--muted);margin:0}
+
+/* leçon */
+.overlay{position:fixed;inset:0;z-index:50}
+.lesson{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--bg);
+  padding:calc(8px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));
+  max-width:100%;overflow:hidden}
+.lesson::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 90% 40% at 50% -10%,rgba(42,92,230,.35),transparent 70%)}
+.lesson>*{position:relative;width:100%;max-width:480px;margin-inline:auto}
+.l-top{display:flex;align-items:center;gap:10px;flex:none}
+.bar,.timer{flex:1;height:18px;border-radius:99px;background:var(--surface);border:2px solid var(--line);overflow:hidden}
+.bar i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,var(--blue),var(--blue-l));transition:width .35s}
+.timer i{display:block;height:100%;width:100%;border-radius:99px;background:linear-gradient(90deg,var(--red),var(--red-l))}
+.score{display:flex;align-items:center;gap:4px;font:800 22px var(--f-display);min-width:56px;color:var(--gold);font-variant-numeric:tabular-nums}
+.score svg{width:22px;height:22px}
+.l-body{flex:1;min-height:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center}
+.lead{margin:0;font:700 clamp(18px,5vw,22px)/1.35 var(--f-body);max-width:30ch;min-height:0}
+.lead:empty{display:none}
+.eq{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px 14px;font:800 clamp(40px,13vw,64px)/1 var(--f-display);font-variant-numeric:tabular-nums}
+.eq .tk{white-space:nowrap}
+.eq .tk.small-t{font-size:.5em;color:var(--muted)}
+.blank{display:inline-grid;place-items:center;min-width:1.7em;min-height:1.25em;padding:0 .2em;border-radius:.28em;background:var(--surface);border:3px dashed var(--blue-l);color:var(--blue-l)}
+.blank.has{border-style:solid;color:var(--fg);background:var(--surface2)}
+.blank.ok{border-color:var(--blue-l);background:#1B3AA0;color:#fff}
+.blank.bad{border-color:var(--red-l);background:#5A1220;color:#fff}
+.l-input{flex:none;display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+.pad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.key{min-height:clamp(48px,8.2vh,62px);border:0;border-radius:16px;background:var(--surface2);box-shadow:0 4px 0 #101D52;font:800 28px var(--f-display);color:var(--fg);display:grid;place-items:center}
+.key:active{transform:translateY(3px);box-shadow:0 1px 0 #101D52}
+.key svg{width:28px;height:28px}
+.key-del{grid-column:span 2}
+.btn-go{grid-column:span 3;min-height:clamp(48px,8.2vh,62px)}
+.choices{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.choice{min-height:clamp(70px,12vh,96px);border-radius:20px;border:3px solid var(--line);background:var(--surface);box-shadow:0 5px 0 #101D52;font:800 36px var(--f-display);font-variant-numeric:tabular-nums}
+.choice[aria-pressed="true"]{border-color:var(--blue-l);background:#1B3AA0}
+.choice:active{transform:translateY(3px);box-shadow:0 2px 0 #101D52}
+.l-input>.btn-go{width:100%;grid-column:auto}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-width:none!important;margin:0!important;padding:18px max(16px,env(safe-area-inset-right,0px)) calc(18px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border-radius:28px 28px 0 0;animation:up .22s ease-out;z-index:3}
+.sheet .in{max-width:480px;margin:0 auto;display:grid;gap:14px}
+.sheet .msg{display:flex;gap:14px;align-items:center}
+.sheet h2{font-size:28px}
+.sheet p{margin:2px 0 0;font-size:16px;font-weight:700}
+.sheet.good{background:var(--good-bg);color:var(--good-fg)}
+.sheet.bad{background:var(--bad-bg);color:var(--bad-fg)}
+.sheet.good .btn{background:var(--blue);box-shadow:0 5px 0 var(--blue-d)}
+.sheet.bad .btn{background:var(--red);box-shadow:0 5px 0 var(--red-d)}
+@keyframes up{from{transform:translateY(100%)}}
+.scrim{position:absolute;inset:0;z-index:5;background:rgba(5,10,30,.78);display:grid;place-items:center;padding:16px;max-width:none!important}
+.dialog{width:100%;max-width:380px;background:var(--surface);border:2px solid var(--line);border-radius:26px;padding:22px;display:grid;gap:14px;text-align:center;justify-items:center}
+.dialog h2{font-size:26px}.dialog p{margin:0;color:var(--muted)}
+.dialog .btn{width:100%}
+
+/* résultat */
+.res{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center}
+.res h1{font-size:36px}
+.res p{margin:0;color:var(--muted);max-width:32ch}
+.bigstars{display:flex;gap:6px;font-size:58px}
+.bigstars>span{color:#33489B}
+.bigstars>.on{color:var(--gold);animation:pop .5s both}
+.bigstars .on:nth-child(2){animation-delay:.25s}.bigstars .on:nth-child(3){animation-delay:.5s}
+@keyframes pop{0%{transform:scale(0) rotate(-40deg)}70%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1)}}
+.gains{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.gain{padding:10px 16px;border-radius:16px;border:2px solid var(--line);background:var(--surface);font:800 20px var(--f-display);display:flex;gap:8px;align-items:center}
+.gain svg{width:22px;height:22px;color:var(--gold)}
+.res .actions{display:grid;gap:10px;width:100%;max-width:480px}
+.newrec{color:var(--gold);font:800 20px var(--f-display)}
+#confetti{position:fixed;inset:0;z-index:80;pointer-events:none;overflow:hidden}
+#confetti i{position:absolute;top:-20px;width:10px;height:16px;border-radius:3px;animation:fall linear forwards}
+@keyframes fall{to{transform:translateY(110vh) rotate(720deg)}}
+.flash-ok{animation:flashok .4s}.flash-bad{animation:shake .4s}
+@keyframes flashok{50%{transform:scale(1.08)}}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.rm *,.rm *::before,.rm *::after{animation:none!important;transition:none!important}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+@media (max-height:700px){.mk{display:none}}
+@media (max-height:640px){.eq{font-size:clamp(34px,11vw,52px)}.l-body{gap:8px}.hero{padding-top:6px}}
+
+/* transitions et douceur */
+.view-in{animation:viewin .34s cubic-bezier(.2,.8,.2,1)}
+@keyframes viewin{from{opacity:0;transform:translateY(10px)}}
+.view-in .stop{animation:stopin .55s cubic-bezier(.2,.9,.3,1.2) both;animation-delay:calc(var(--k,0)*55ms)}
+@keyframes stopin{from{opacity:0;transform:translate(-50%,-38%) scale(.85)}}
+.lesson.reveal{animation:reveal .55s cubic-bezier(.2,.8,.2,1)}
+@keyframes reveal{from{clip-path:circle(0 at var(--ox,50%) var(--oy,50%))}to{clip-path:circle(160% at var(--ox,50%) var(--oy,50%))}}
+.overlay.closing{animation:fadeout .24s ease-in forwards;pointer-events:none}
+@keyframes fadeout{to{opacity:0}}
+.qwrap{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%}
+.qin{animation:qin .3s cubic-bezier(.2,.8,.2,1)}
+@keyframes qin{from{opacity:0;transform:translateX(26px)}}
+.sheet.out{animation:down .19s ease-in forwards}
+@keyframes down{to{transform:translateY(105%)}}
+.l-input{transition:opacity .2s}
+.l-input[inert]{opacity:.35}
+
+/* retour sur erreur doux */
+.sheet.help{background:var(--help-bg);color:var(--help-fg)}
+.sheet.help .btn{background:var(--blue);box-shadow:0 5px 0 var(--blue-d)}
+.sheet .btn.ghost2{background:transparent;color:var(--help-fg);box-shadow:none;border:2px solid var(--help-line)}
+.sheet .btn.ghost2:active{transform:none}
+.sheet .tx{min-width:0;flex:1}
+.sheet .nudge{font-weight:800}
+.sheet .expl{margin-top:6px}
+.sheet .small2{font-size:14px;font-weight:700;margin-top:8px;opacity:.85}
+.sheet .two{display:grid;grid-template-columns:1fr;gap:10px}
+.sheet .viz{margin:0}
+.blank.soft{border-color:#B7A9FF;border-style:solid;background:#2B2486;color:#fff}
+.eq.wobble{animation:wob .45s ease-in-out}
+@keyframes wob{20%{transform:rotate(-1.8deg)}60%{transform:rotate(1.8deg)}}
+.hintcard{max-width:340px;width:100%;background:var(--surface);border:2px solid var(--gold);border-radius:18px;padding:10px 14px 12px;text-align:left;font-size:16px}
+.hintcard p{margin:2px 0 0}
+.hc-t{display:flex;align-items:center;gap:8px;color:var(--gold);font:800 15px var(--f-display);letter-spacing:.06em;text-transform:uppercase}
+.hc-t svg{width:20px;height:20px}
+.viz{display:flex;flex-wrap:wrap;gap:5px;margin-top:10px;justify-content:center;align-items:center}
+.viz .d{width:16px;height:16px;border-radius:50%;background:var(--blue-l);display:inline-block}
+.viz .d.r{background:var(--red-l)}
+.viz .d.x{background:transparent;border:2px dashed currentColor;opacity:.6}
+.viz .gap{width:8px}
+.viz .gap.plus{width:auto;font:800 18px var(--f-display);padding:0 4px}
+.viz.grid{display:grid;grid-template-columns:repeat(var(--c),16px);justify-content:center;gap:5px}
+.sheet .viz .d{background:#4B6FE0}.sheet .viz .d.r{background:#D62839}
+.tip{max-width:320px;background:var(--fg);color:#0A1330;padding:10px 14px;border-radius:16px;font-size:15px;line-height:1.35}
+.lamp{color:var(--gold)}
+.lamp:disabled{opacity:.4}
+.combo{display:inline-flex;align-items:center;gap:4px;font:800 20px var(--f-display);color:var(--red-l);min-width:44px;font-variant-numeric:tabular-nums}
+.combo svg{width:22px;height:22px}
+.combo.bump{animation:bump .4s cubic-bezier(.2,.9,.3,1.6)}
+@keyframes bump{from{transform:scale(.5)}60%{transform:scale(1.35)}}
+.bar.pulse{animation:barpulse .5s}
+@keyframes barpulse{40%{box-shadow:0 0 0 5px rgba(124,158,255,.45)}}
+
+/* récompenses */
+.lesson>.fx{position:absolute;inset:0;max-width:none;width:auto;margin:0;pointer-events:none;z-index:4;overflow:hidden}
+.fx .sp{position:absolute;width:14px;height:14px;margin:-7px;clip-path:polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%);animation:spark .85s cubic-bezier(.1,.7,.3,1) both}
+@keyframes spark{from{transform:translate(0,0) scale(.3) rotate(0)}70%{opacity:1}to{transform:translate(var(--dx),var(--dy)) scale(1.1) rotate(200deg);opacity:0}}
+.fx .plus{position:absolute;transform:translate(-50%,-50%);font:800 34px var(--f-display);color:var(--gold);text-shadow:0 2px 0 rgba(0,0,0,.4);animation:rise2 1s ease-out both}
+@keyframes rise2{from{opacity:0;transform:translate(-50%,-30%) scale(.6)}25%{opacity:1;transform:translate(-50%,-90%) scale(1.15)}to{opacity:0;transform:translate(-50%,-190%) scale(1)}}
+.fx .ring{position:absolute;width:60px;height:60px;margin:-30px;border-radius:50%;border:4px solid var(--gold);animation:ring .6s ease-out both}
+@keyframes ring{from{transform:scale(.4);opacity:1}to{transform:scale(2.6);opacity:0}}
+.blank.ok{border-color:var(--gold);background:#1B3AA0;box-shadow:0 0 0 4px rgba(255,201,60,.35),0 0 26px rgba(255,201,60,.35)}
+.sheet.good{background:linear-gradient(180deg,#EAF0FF,#CBDBFF)}
+.sheet .mkb{flex:none}
+.sheet.good .mkb{animation:hop .55s cubic-bezier(.2,.9,.3,1.4)}
+@keyframes hop{from{transform:scale(.3) translateY(30px)}}
+.xpchip{flex:none;display:inline-flex;align-items:center;gap:5px;font:800 22px var(--f-display);background:#fff;color:#0C2A8A;padding:6px 12px;border-radius:99px;box-shadow:0 3px 0 #9DB5F5;animation:pop2 .55s .12s cubic-bezier(.2,.9,.3,1.5) both;font-variant-numeric:tabular-nums}
+.xpchip svg{width:20px;height:20px;color:#E0A100}
+@keyframes pop2{from{transform:scale(0) rotate(-20deg)}}
+.res>*{animation:riseup .55s cubic-bezier(.2,.8,.2,1) both}
+.res>*:nth-child(2){animation-delay:.08s}.res>*:nth-child(3){animation-delay:.16s}.res>*:nth-child(4){animation-delay:.24s}.res>*:nth-child(5){animation-delay:.32s}.res>*:nth-child(6){animation-delay:.4s}
+@keyframes riseup{from{opacity:0;transform:translateY(16px)}}
+.res .mf{animation:hop2 .8s cubic-bezier(.2,.9,.3,1.3) both}
+@keyframes hop2{from{transform:scale(.4) translateY(40px)}}
+@media (max-height:700px){.hintcard .viz{margin-top:6px}.viz .d{width:13px;height:13px}.viz.grid{grid-template-columns:repeat(var(--c),13px)}}
+
+/* récompenses */
+.chip.gem svg{color:#7CE3FF}
+.gain.gem svg{color:#7CE3FF}
+.tab{position:relative}
+.tab .dot{position:absolute;top:6px;left:calc(50% + 8px);width:12px;height:12px;border-radius:50%;background:var(--red);border:2px solid var(--bg)}
+.rwdisc{width:52px;height:52px;border-radius:50%;flex:none;display:grid;place-items:center;background:var(--bg2);border:2px solid var(--line);color:var(--blue-l)}
+.rwdisc svg{width:28px;height:28px}
+.rwdisc.big{width:72px;height:72px}
+.rwlist{gap:10px}
+.rwlist li.rwcard{justify-content:flex-start;align-items:center;gap:14px;padding:12px 14px}
+.rwcard .rwb{flex:1;min-width:0;display:grid;gap:6px}
+.rwcard .rwb b{font:800 18px var(--f-display);color:var(--fg)}
+.rwcard .rwsub{font-size:14px;color:var(--muted)}
+.rwcard.ready{border-color:var(--gold);background:#2A2A55}
+.rwcard.ready .rwdisc{border-color:var(--gold);color:var(--gold)}
+.meter.blue i{background:linear-gradient(90deg,var(--blue),var(--blue-l))}
+.gemhero{display:flex;align-items:center;gap:14px;margin-top:10px;padding:14px 16px;border-radius:22px;background:var(--surface);border:2px solid var(--line)}
+.gembig svg{width:52px;height:52px;color:#7CE3FF}
+.gemn{font:800 36px var(--f-display);color:var(--fg)}
+.gemhero .small{margin:2px 0 0}
+.readybox{margin-top:12px;border-color:var(--gold)}
+.nextrw{display:flex;align-items:center;gap:14px;width:100%;margin-top:12px;text-align:left;color:var(--fg);font:700 15px var(--f-body);cursor:pointer;min-height:64px}
+.nextrw b{font:800 17px var(--f-display)}
+.nextrw.ready{border-color:var(--gold)}
+.nextrw.ready .rwdisc{border-color:var(--gold);color:var(--gold)}
+.rwbanner{margin:14px auto 0;max-width:360px;display:grid;gap:2px;padding:12px 16px;border-radius:18px;background:#2A2A55;border:2px solid var(--gold);text-align:center;color:var(--fg)}
+.rwbanner b{font:800 18px var(--f-display);color:var(--gold)}
+.rwhist{font-size:15px}
+.pins{display:flex;gap:14px;justify-content:center;margin:6px 0}
+.pd{width:20px;height:20px;border-radius:50%;border:3px solid var(--blue-l);display:block}
+.pd.on{background:var(--blue-l)}
+.pinpad{grid-template-columns:repeat(3,1fr);width:100%;max-width:300px;margin:6px auto}
+.pinpad .key{min-height:60px}
+.btn.sm{min-height:48px;padding:6px 16px;font-size:15px}
+.grow{flex:1;min-width:0;width:auto}
+.num{width:110px;text-align:center}
+.gl li{align-items:center;justify-content:flex-start}
+.gl li .grow{flex:1}
+.rwedit{display:grid;gap:8px}
+.rwhead{display:flex;align-items:center;gap:12px}
+.icons{display:flex;flex-wrap:wrap;gap:8px}
+.ibtn{width:48px;height:48px;border-radius:14px;border:2px solid var(--line);background:var(--bg2);color:var(--muted);display:grid;place-items:center;padding:0}
+.ibtn svg{width:26px;height:26px}
+.ibtn[aria-pressed="true"]{border-color:var(--blue-l);color:var(--fg);background:var(--blue)}
+.rwacts{display:flex;gap:8px;flex-wrap:wrap}
+.gh{font:800 16px var(--f-display);margin:16px 0 6px;color:var(--muted)}
+.ideas{display:grid;gap:8px}
+.idea{display:flex;align-items:center;gap:12px;min-height:56px;padding:8px 12px;border-radius:14px;border:2px solid var(--line);background:var(--bg2);color:var(--fg);text-align:left;font:700 15px var(--f-body)}
+.idea svg{width:26px;height:26px;color:var(--blue-l);flex:none}
+.idea small{display:block;color:var(--muted);font-size:13px}
+details.card summary{min-height:48px;display:flex;align-items:center;font:800 17px var(--f-display);cursor:pointer}
+@media (prefers-reduced-motion:reduce){.meter i{transition:none}}
+.toast{position:fixed;left:16px;right:16px;bottom:100px;z-index:50;background:var(--fg);color:#0A1330;border-radius:16px;padding:12px 16px;font:800 16px var(--f-display);text-align:center}a.btn{display:flex;align-items:center;justify-content:center;text-decoration:none}.xfer{margin-top:12px;display:grid;gap:8px;border-color:var(--gold)}.rwn{font:800 13px var(--f-display);letter-spacing:.04em;color:var(--muted)}.rwcard.got{border-color:var(--blue-l)}.rwcard.lock:not(.nxt) .rwdisc{opacity:.75}.rwcard.nxt{border-color:var(--blue-l);background:#1B2A6A}.rwtick{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;flex:none;background:var(--blue);color:#fff}.rwtick svg{width:20px;height:20px}.rwtick.dim{background:transparent;color:var(--muted)}.sect{grid-template-columns:minmax(0,1fr)}.rwedit,.rwhead,.card{min-width:0}.txt.grow{width:100%;min-width:0}.rwhead .txt{min-width:0}
+
+/* audit UX : en-tête, onglets, champs, compte */
+.top{flex-wrap:wrap;row-gap:8px}.top .hi{flex:1 1 130px}.chips{margin-left:auto}
+@media(max-width:400px){.top h1{font-size:22px}.top>div[aria-hidden] svg{width:48px;height:48px}}
+.tab{min-width:0;flex:1 1 0;padding:0 2px}
+@media(max-width:340px){.tab{font-size:11px;letter-spacing:.02em}.nav .in{gap:4px}}
+:root{--field-line:#6E86E0}
+.txt,.btn.ghost{border-color:var(--field-line)}
+.btn:disabled{color:#B4C0EE}
+#acc .set{flex-direction:column;align-items:stretch;gap:6px}#acc .txt{width:100%}
+#acc summary{min-height:44px;display:flex;align-items:center}
+#acc h2.h-card{font:800 18px var(--f-display);margin:0 0 6px}
+.pw{display:flex;gap:8px}.pw .txt{flex:1;min-width:0}.pw .btn{flex:none}
+#accmsg{margin:8px 0 0;min-height:0}#accmsg:not(:empty){padding:10px 12px;border-radius:12px;background:#2A3A7E;color:var(--fg)}#accmsg.bad{background:#5A1B3A}#accmsg.good{background:#14532D}
+body:has(#sheet:not([hidden])) #hint{display:none}
+.rwacts .btn[data-act=rwdel]{border-color:#FF8A8A;color:#FF8A8A}
+</style>
+</head><body>
+
+<div class="app"><main id="view" tabindex="-1" aria-live="off"></main></div>
+<nav class="nav" id="nav" aria-label="Navigation principale"></nav>
+<div class="overlay" id="overlay" hidden></div>
+<div id="confetti" aria-hidden="true"></div>
+
+<script>
+(function(){
+'use strict';
+document.documentElement.lang='fr';
+const $=(s,r=document)=>r.querySelector(s);
+const rnd=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
+const pick=a=>a[rnd(0,a.length-1)];
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]];}return a;};
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const TIMES='×',DIV='÷',MINUS='−';
+
+/* ---------- icônes ---------- */
+const P={
+ flame:'<path class="f" d="M12 2c.8 3.6 5.2 5.2 5.2 10.6a5.2 5.2 0 0 1-10.4 0c0-2 .9-3.3 2-4.3.2 1.3.8 2.1 1.6 2.4C10 8 10.6 4.4 12 2z"/>',
+ star:'<path class="f" d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.6-5.9-3.2-5.9 3.2 1.2-6.6L2.5 9.5l6.6-.9z"/>',
+ lock:'<rect x="5" y="11" width="14" height="10" rx="3" class="f"/><path d="M8 11V8a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>',
+ check:'<path d="M5 13l4.5 4.5L19 7"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ bolt:'<path class="f" d="M13.5 2L4.5 14h6l-1 8 9-12h-6z"/>',
+ map:'<circle cx="12" cy="12" r="6.5"/><path d="M2.5 15c3-6 16-11 19-6" /><path d="M21.5 9c-1.5 3.5-12 9.5-19 6"/>',
+ chart:'<path d="M5 20V11M12 20V4M19 20v-6"/>',
+ bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.6.5 1.1 1.2 1.1 2V16h5v-.2c0-.8.5-1.5 1.1-2A6 6 0 0 0 12 3z"/>',
+ gem:'<path class="f" d="M7 3h10l4 6-9 12L3 9z"/><path d="M3 9h18M9 3L7 9l5 12M15 3l2 6-5 12" fill="none" stroke="#0A1330" stroke-opacity=".4" stroke-width="1.4"/>',
+ candy:'<circle class="f" cx="12" cy="12" r="5"/><path class="f" d="M7 9L2.5 6.5v11L7 15zM17 9l4.5-2.5v11L17 15z"/>',
+ game:'<rect x="2.5" y="7" width="19" height="11" rx="5.5"/><path d="M8 10v5M5.5 12.5h5"/><circle class="f" cx="16" cy="11.5" r="1.2"/><circle class="f" cx="18.4" cy="14" r="1.2"/>',
+ ticket:'<path d="M3 7h18v3a2 2 0 0 0 0 4v3H3v-3a2 2 0 0 0 0-4z"/><path d="M14 8v8" stroke-dasharray="2 2"/>',
+ gift:'<rect x="3" y="9" width="18" height="12" rx="2"/><path d="M3 13h18M12 9v12M12 9C9 9 7 7.5 8 5.5S12 5 12 9zM12 9c3 0 5-1.5 4-3.5S12 5 12 9z"/>',
+ trophy:'<path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H3.5c0 3 1.5 4.5 3.7 4.8M17 6h3.5c0 3-1.5 4.5-3.7 4.8M12 14v4M8 21h8M9 18h6"/>',
+ tent:'<path d="M2.5 20L12 4l9.5 16zM12 4v16M9 20l3-6 3 6"/>',
+ book:'<path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zM4 19a2 2 0 0 1 2-2h13"/>',
+ popcorn:'<path d="M6 10h12l-1.5 11h-9zM9 10l.8 11M15 10l-.8 11"/><circle cx="8" cy="7.5" r="2.5"/><circle cx="12" cy="6" r="2.7"/><circle cx="16" cy="7.5" r="2.5"/>',
+ ice:'<path d="M7.5 11L12 21l4.5-10z"/><circle cx="12" cy="7" r="4.5"/>',
+ pin:'<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.800 12 21 12 21z"/><circle class="f" cx="12" cy="9.5" r="2.4"/>',
+ back:'<path d="M20 5H9L3 12l6 7h11a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M12.5 9.5l5 5M17.5 9.5l-5 5"/>'
+};
+const ICON={};
+for(const k in P){ICON[k]=`<svg class="i" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${P[k].replace(/class="f"/g,'fill="currentColor" stroke="none"')}</svg>`;}
+
+/* ---------- mascotte Zip ---------- */
+function mascot(expr,size){
+  const eyes={
+    happy:'<path d="M41 58q7-10 14 0M65 58q7-10 14 0" fill="none" stroke="#F4F6FF" stroke-width="4" stroke-linecap="round"/>',
+    neutral:'<circle cx="48" cy="57" r="5.5" fill="#F4F6FF"/><circle cx="72" cy="57" r="5.5" fill="#F4F6FF"/>',
+    cheer:'<circle cx="48" cy="56" r="7" fill="#F4F6FF"/><circle cx="72" cy="56" r="7" fill="#F4F6FF"/><circle cx="50" cy="54" r="2.4" fill="#13236B"/><circle cx="74" cy="54" r="2.4" fill="#13236B"/>',
+    kind:'<circle cx="48" cy="58" r="5.5" fill="#F4F6FF"/><circle cx="72" cy="58" r="5.5" fill="#F4F6FF"/><circle cx="50" cy="56" r="1.8" fill="#13236B"/><circle cx="74" cy="56" r="1.8" fill="#13236B"/><path d="M40 47q8-5 15 0M65 47q8-5 15 0" fill="none" stroke="#F4F6FF" stroke-width="3" stroke-linecap="round"/>',
+    oops:'<circle cx="48" cy="58" r="5.5" fill="#F4F6FF"/><circle cx="72" cy="58" r="5.5" fill="#F4F6FF"/><path d="M40 47l12 3M80 47l-12 3" stroke="#F4F6FF" stroke-width="3.2" stroke-linecap="round"/>'
+  }[expr]||'';
+  const mouth={
+    happy:'<path d="M50 68q10 11 20 0z" fill="#FF8791"/>',
+    neutral:'<path d="M52 70q8 5 16 0" fill="none" stroke="#FF8791" stroke-width="3.5" stroke-linecap="round"/>',
+    cheer:'<path d="M47 66q13 20 26 0z" fill="#FF8791"/>',
+ kind:'<path d="M51 69q9 8 18 0" fill="none" stroke="#FF8791" stroke-width="3.5" stroke-linecap="round"/>',
+    oops:'<path d="M52 75q8-7 16 0" fill="none" stroke="#FF8791" stroke-width="3.5" stroke-linecap="round"/>'
+  }[expr]||'';
+  return `<svg viewBox="0 0 120 124" width="${size}" height="${Math.round(size*1.033)}" aria-hidden="true" focusable="false"><g class="mf">
+   <path d="M60 22v-8" stroke="#F4F6FF" stroke-width="4" stroke-linecap="round"/><circle cx="60" cy="10" r="6.5" fill="#D62839"/>
+   <ellipse cx="60" cy="113" rx="33" ry="11" fill="#DDE4FF"/>
+   <circle cx="60" cy="60" r="42" fill="#F4F6FF"/>
+   <circle cx="19" cy="62" r="7" fill="#D62839"/><circle cx="101" cy="62" r="7" fill="#D62839"/>
+   <ellipse cx="60" cy="60" rx="33" ry="28" fill="#13236B" stroke="#2A5CE6" stroke-width="4"/>
+   <path d="M37 47q7-10 19-12" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="4" stroke-linecap="round"/>
+   ${eyes}${mouth}<circle cx="37" cy="70" r="4" fill="#FF8791" opacity=".55"/><circle cx="83" cy="70" r="4" fill="#FF8791" opacity=".55"/></g></svg>`;
+}
+
+/* ---------- planètes ---------- */
+const PLANETS=[
+ {n:'Lune',a:'#EEF1FF',b:'#9AA8E0',d:'craters'},{n:'Mercure',a:'#9DBBFF',b:'#3F63D6',d:'craters'},
+ {n:'Vénus',a:'#FF9FA8',b:'#D62839',d:'bands'},{n:'Mars',a:'#FF7070',b:'#9B1424',d:'craters'},
+ {n:'Cérès',a:'#CDBDFF',b:'#6B54D6',d:'craters'},{n:'Jupiter',a:'#FFB9AE',b:'#C2354A',d:'bands'},
+ {n:'Saturne',a:'#FFC9B4',b:'#E0574A',d:'ring'},{n:'Uranus',a:'#A6E6FF',b:'#2D8FD6',d:'bands'},
+ {n:'Neptune',a:'#7C9EFF',b:'#1B3A9E',d:'bands'},{n:'Pluton',a:'#F8DDE4',b:'#B8667A',d:'craters'},
+ {n:'Titan',a:'#FFD3B8',b:'#C5546A',d:'bands'},{n:'Comète',a:'#FFFFFF',b:'#7C9EFF',d:'comet'},
+ {n:'Europe',a:'#E3EEFF',b:'#5F86E0',d:'craters'},{n:'Éris',a:'#EBD8FF',b:'#8B63D8',d:'craters'},
+ {n:'Nébuleuse',a:'#FFA6C9',b:'#5B46D0',d:'bands'},{n:'Soleil',a:'#FFE48F',b:'#F0652F',d:'sun'}
+];
+function planetSVG(i){
+  const p=PLANETS[i],id='pg'+i;let back='',front='';
+  const clip=`<clipPath id="pc${i}"><circle cx="50" cy="50" r="36"/></clipPath>`;
+  let deco='';
+  if(p.d==='craters')deco='<circle cx="38" cy="40" r="6" fill="rgba(0,0,0,.16)"/><circle cx="63" cy="56" r="9" fill="rgba(0,0,0,.16)"/><circle cx="46" cy="68" r="4" fill="rgba(0,0,0,.16)"/>';
+  if(p.d==='bands')deco='<g clip-path="url(#pc'+i+')"><path d="M10 40h80M8 52h84M12 64h76" stroke="rgba(255,255,255,.3)" stroke-width="5" stroke-linecap="round"/></g>';
+  if(p.d==='ring'){back='<g transform="rotate(-18 50 50)"><path d="M-6 50A56 15 0 0 1 106 50" fill="none" stroke="#7C9EFF" stroke-width="6"/></g>';front='<g transform="rotate(-18 50 50)"><path d="M-6 50A56 15 0 0 0 106 50" fill="none" stroke="#9DB7FF" stroke-width="6"/></g>';}
+  if(p.d==='comet'){back='<path d="M30 62L-8 104 44 76z" fill="rgba(124,158,255,.55)"/><path d="M26 52L-12 80 38 66z" fill="rgba(255,255,255,.4)"/>';}
+  if(p.d==='sun'){back='<circle cx="50" cy="50" r="48" fill="rgba(255,200,90,.28)"/>';}
+  return `<svg class="pl" viewBox="-12 -12 124 124" aria-hidden="true" focusable="false"><defs><radialGradient id="${id}" cx="35%" cy="30%" r="80%"><stop offset="0" stop-color="${p.a}"/><stop offset="1" stop-color="${p.b}"/></radialGradient>${clip}</defs>${back}<circle cx="50" cy="50" r="36" fill="url(#${id})"/>${deco}${front}</svg>`;
+}
+
+/* ---------- état ---------- */
+const KEY='missioncalculo.v2',OLDKEY='missioncalculo.v1';
+function defState(){return{name:'Octave',unlocked:1,stars:{},xp:0,streak:0,lastDay:'',daily:{d:'',xp:0},best:0,facts:{},sk:{},answered:0,correct:0,sound:true,reduce:null,placed:false,placeDismissed:false,tipSeen:false,blitzPlays:0,cr:0,crDay:{d:'',n:0},crLog:{},cap:8,lad:[],ladInit:false,ladBase:0,cycle:1,hist:[],pin:'',ts:0};}
+let S=defState();
+try{
+  const j=localStorage.getItem(KEY);
+  if(j){const o=JSON.parse(j);if(o&&typeof o==='object')S=Object.assign(defState(),o);}
+  else{const old=JSON.parse(localStorage.getItem(OLDKEY)||'null');
+    if(old&&typeof old==='object'){['name','sound','reduce','facts','xp','streak','lastDay','daily','best','answered','correct'].forEach(k=>{if(old[k]!==undefined)S[k]=old[k];});}}
+}catch(e){}
+function save(){S.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}try{schedulePush();}catch(e){}}
+function ymd(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function yest(){const d=new Date();d.setDate(d.getDate()-1);return ymd(d);}
+function streakNow(){return(S.lastDay===ymd()||S.lastDay===yest())?S.streak:0;}
+function touchStreak(){const t=ymd();if(S.lastDay===t)return false;S.streak=S.lastDay===yest()?S.streak+1:1;S.lastDay=t;return true;}
+function addXp(n){const t=ymd();if(S.daily.d!==t)S.daily={d:t,xp:0};S.daily.xp+=n;S.xp+=n;}
+function dailyXp(){return S.daily.d===ymd()?S.daily.xp:0;}
+const DAILY_GOAL=30;
+const LEVELS=[['Cadet',0],['Pilote',100],['Navigateur',250],['Commandant',500],['Amiral',900],['Légende',1500]];
+function levelInfo(){let i=0;LEVELS.forEach((l,k)=>{if(S.xp>=l[1])i=k;});const c=LEVELS[i],n=LEVELS[i+1];return{name:c[0],next:n?n[0]:null,left:n?n[1]-S.xp:0,pct:n?(S.xp-c[1])/(n[1]-c[1]):1};}
+function totalStars(){return Object.values(S.stars).reduce((a,b)=>a+b,0);}
+function reduced(){return S.reduce===null?(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches):S.reduce;}
+function applyMotion(){document.documentElement.classList.toggle('rm',reduced());}
+const name=()=>S.name&&S.name.trim()?S.name.trim():'Explorateur';
+
+/* ---------- son ---------- */
+let AC=null;
+function tone(f,d,w,type,v){if(!S.sound)return;try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime+(w||0),o=AC.createOscillator(),g=AC.createGain();o.type=type||'sine';o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v||.08,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.05);}catch(e){}}
+const sfx={ok(s){const k=1+Math.min(s||0,6)*.06;tone(660*k,.12);tone(880*k,.2,.1);if(s>=3)tone(1100*k,.25,.2);},bad(){tone(392,.18,0,'sine',.05);tone(349,.28,.14,'sine',.05);},win(){[523,659,784,1047].forEach((f,i)=>tone(f,.22,i*.12));},tick(){tone(520,.05,0,'sine',.04);}};
+function buzz(n){try{navigator.vibrate&&navigator.vibrate(n);}catch(e){}}
+
+/* ---------- générateurs de questions ---------- */
+const SESS={recent:new Set()};
+const fk=(a,b)=>a<=b?a+'x'+b:b+'x'+a;
+const DD=d=>d===undefined?Math.random():d;
+function recFact(k,ok){if(!k)return;const f=S.facts[k]||(S.facts[k]={s:0,c:0,l:1});f.s++;if(ok)f.c++;f.l=ok?1:0;}
+function recSk(id,ok){if(!id)return;const k=S.sk[id]||(S.sk[id]={s:0,c:0});k.s++;if(ok)k.c++;}
+function factW(a,b){const f=S.facts[fk(a,b)];if(!f||!f.s)return 2.2;const acc=f.c/f.s;let w=.5+(1-acc)*3.5;if(f.l===0)w+=1.5;if(f.s>=4&&acc>=.9&&f.l===1)w=.35;return w;}
+function wpick(items,wf){let tot=0;const ws=items.map(i=>{const w=Math.max(.01,wf(i));tot+=w;return w;});let r=Math.random()*tot;for(let i=0;i<items.length;i++){r-=ws[i];if(r<=0)return items[i];}return items[items.length-1];}
+const near=(v)=>[v+1,v-1,v+2,v-2,v+10,v-10];
+
+/* additions */
+function mkAdd(a,b,nudge,hint,viz){return{tokens:[`${a} + ${b} =`,'_'],answer:a+b,speak:`${a} plus ${b} égale combien ?`,distract:near(a+b),nudge,hint,viz};}
+function genAddEasy(d){d=DD(d);let a,b;
+  if(d<.34){a=rnd(1,5);b=rnd(1,5);return mkAdd(a,b,'Imagine des points et compte-les tous.',`Mets ${a} points bleus et ${b} points rouges. En tout, il y en a ${a+b}.`,{k:'add',a,b});}
+  if(d<.67){a=rnd(2,9);b=rnd(1,10-a);const hi=Math.max(a,b),lo=Math.min(a,b);return mkAdd(a,b,'Pars du plus grand nombre et avance de l\'autre.',`Pars de ${hi} et avance de ${lo} : ${hi}, puis encore ${lo} pas. Tu arrives à ${a+b}.`,{k:'add',a,b});}
+  const u=rnd(1,8);a=10+u;b=rnd(1,9-u);return mkAdd(a,b,'Le 10 ne bouge pas : additionne seulement les unités.',`${a} c'est 10 + ${u}. On fait ${u} + ${b} = ${u+b}, puis 10 + ${u+b} = ${a+b}.`);}
+function genAddMid(d){d=DD(d);let a,b;
+  if(d<.4){a=rnd(6,9);b=rnd(Math.max(2,11-a),9);const need=10-a;return mkAdd(a,b,'Complète d\'abord jusqu\'à 10.',`${a} + ${need} = 10. Il reste ${b-need} à ajouter : 10 + ${b-need} = ${a+b}.`,{k:'add',a,b});}
+  if(d<.7){const ua=rnd(1,5);a=10*rnd(1,8)+ua;b=rnd(1,9-ua);return mkAdd(a,b,'Les dizaines restent pareilles : additionne les unités.',`${ua} + ${b} = ${ua+b}, donc ${a} + ${b} = ${a+b}.`);}
+  let ua;do{ua=rnd(5,9);b=rnd(4,9);}while(ua+b<11);a=10*rnd(1,7)+ua;const nx=a+10-ua;
+  return mkAdd(a,b,'Va jusqu\'à la dizaine suivante.',`${a} + ${nx-a} = ${nx}. Il reste ${b-(nx-a)} à ajouter : ${nx} + ${b-(nx-a)} = ${a+b}.`);}
+function genAddHard(d){d=DD(d);let a,b;
+  if(d<.3){a=rnd(11,50);const t=rnd(1,Math.min(3,Math.floor((99-a)/10)));b=t*10;const ta=a-a%10;return mkAdd(a,b,'Ajoute seulement les dizaines.',`${ta} + ${b} = ${ta+b}. On garde les ${a%10} unités : ${a+b}.`);}
+  if(d<.65){let ua,ub;do{a=10*rnd(1,6)+rnd(1,8);b=10*rnd(1,3)+rnd(1,8);ua=a%10;ub=b%10;}while(ua+ub>9||a+b>99);const ta=a-ua,tb=b-ub;return mkAdd(a,b,'Additionne les dizaines, puis les unités.',`${ta} + ${tb} = ${ta+tb} et ${ua} + ${ub} = ${ua+ub}. Donc ${ta+tb} + ${ua+ub} = ${a+b}.`);}
+  let ua,ub;do{a=rnd(15,79);b=rnd(15,85);ua=a%10;ub=b%10;}while(ua+ub<10||a+b>100);const ta=a-ua,tb=b-ub;
+  return mkAdd(a,b,'Additionne les dizaines, puis les unités, puis regroupe.',`${ta} + ${tb} = ${ta+tb} et ${ua} + ${ub} = ${ua+ub}. Puis ${ta+tb} + ${ua+ub} = ${a+b}.`);}
+
+/* soustractions */
+function mkSub(a,b,nudge,hint,viz){return{tokens:[`${a} ${MINUS} ${b} =`,'_'],answer:a-b,speak:`${a} moins ${b} égale combien ?`,distract:near(a-b),nudge,hint,viz};}
+function genSubEasy(d){d=DD(d);let a,b;
+  if(d<.34){a=rnd(3,10);b=rnd(1,a-1);return mkSub(a,b,'Retire des points, ou cherche ce qu\'il faut ajouter à '+b+' pour faire '+a+'.',`Il y a ${a} points et on en enlève ${b}. Il en reste ${a-b}.`,{k:'sub',a,b});}
+  if(d<.67){a=rnd(11,19);b=rnd(1,a%10);return mkSub(a,b,'Enlève seulement les unités.',`${a%10} ${MINUS} ${b} = ${a%10-b}, donc ${a} ${MINUS} ${b} = ${a-b}.`,{k:'sub',a,b});}
+  a=rnd(12,18);b=rnd(a%10+1,9);const u=a%10;return mkSub(a,b,'Recule d\'abord jusqu\'à 10, puis continue.',`${a} ${MINUS} ${u} = 10. Il reste ${b-u} à enlever : 10 ${MINUS} ${b-u} = ${a-b}.`,{k:'sub',a,b});}
+function genSubHard(d){d=DD(d);let a,b;
+  if(d<.3){a=rnd(21,59);const m=Math.floor(a/10)-1;b=10*rnd(1,Math.max(1,m));return mkSub(a,b,'Enlève seulement les dizaines.',`${a-a%10} ${MINUS} ${b} = ${a-a%10-b}. On garde les ${a%10} unités : ${a-b}.`);}
+  if(d<.55){const ua=rnd(3,9);a=10*rnd(2,9)+ua;b=rnd(1,ua);return mkSub(a,b,'Enlève seulement les unités.',`${ua} ${MINUS} ${b} = ${ua-b}, donc ${a} ${MINUS} ${b} = ${a-b}.`);}
+  if(d<.8){const ua=rnd(0,4);a=10*rnd(3,9)+ua;b=rnd(ua+1,9);
+    if(ua===0)return mkSub(a,b,'Recule d\'une dizaine, puis avance.',`${a} ${MINUS} 10 = ${a-10}. Mais on voulait enlever seulement ${b} : on avance de ${10-b}. ${a-10} + ${10-b} = ${a-b}.`);
+    return mkSub(a,b,'Recule jusqu\'à la dizaine du dessous, puis continue.',`${a} ${MINUS} ${ua} = ${a-ua}. Il reste ${b-ua} à enlever : ${a-ua} ${MINUS} ${b-ua} = ${a-b}.`);}
+  a=rnd(52,99);b=rnd(12,a-12);const tb=b-b%10,ub=b%10;
+  return mkSub(a,b,'Enlève les dizaines, puis les unités.',ub?`${a} ${MINUS} ${tb} = ${a-tb}. Puis ${a-tb} ${MINUS} ${ub} = ${a-b}.`:`${a} ${MINUS} ${b} : ${Math.floor(a/10)} dizaines moins ${b/10} dizaines, il reste ${a-b}.`);}
+function genMix(d){d=DD(d);const add=Math.random()<.5;
+  if(add)return d<.45?genAddMid(.5+d*.4):genAddHard(d*.9);
+  return d<.45?genSubEasy(.6+d*.4):genSubHard(d*.9);}
+
+/* doubles, moitiés, compléments */
+function genDouble(d){d=DD(d);
+  if(d<.4){const n=rnd(2,10);return{tokens:[`Le double de ${n} =`,'_'],answer:2*n,speak:`Le double de ${n} égale combien ?`,nudge:'Doubler, c\'est ajouter le nombre à lui-même.',hint:`${n} + ${n} = ${2*n}.`,viz:{k:'add',a:n,b:n},distract:near(2*n)};}
+  if(d<.75){const h=rnd(2,10)*2;return{tokens:[`La moitié de ${h} =`,'_'],answer:h/2,speak:`La moitié de ${h} égale combien ?`,nudge:'La moitié, c\'est partager en deux parts égales.',hint:`${h} partagé en deux parts égales, chacun a ${h/2}.`,distract:near(h/2)};}
+  if(Math.random()<.5){const n=rnd(11,25),T=n-n%10,U=n%10;return{tokens:[`Le double de ${n} =`,'_'],answer:2*n,speak:`Le double de ${n} égale combien ?`,nudge:'Double les dizaines, puis les unités.',hint:`${n} = ${T} + ${U}. Le double de ${T} est ${2*T}, celui de ${U} est ${2*U}. Total : ${2*n}.`,distract:near(2*n)};}
+  const h=rnd(11,25)*2,T=h-h%10,U=h%10;return{tokens:[`La moitié de ${h} =`,'_'],answer:h/2,speak:`La moitié de ${h} égale combien ?`,nudge:'Coupe en deux les dizaines, puis les unités.',hint:`${h} = ${T} + ${U}. La moitié de ${T} est ${T/2}, celle de ${U} est ${U/2}. Total : ${h/2}.`,distract:near(h/2)};}
+function genCompl(d){d=DD(d);
+  if(d<.3){const n=rnd(1,9);return{tokens:[`${n} +`,'_','= 10'],answer:10-n,speak:`${n} plus combien égale 10 ?`,nudge:'Combien de points faut-il pour arriver à 10 ?',hint:`${n} + ${10-n} = 10.`,viz:{k:'add',a:n,b:10-n},distract:near(10-n)};}
+  if(d<.55){const n=rnd(11,19);return{tokens:[`${n} +`,'_','= 20'],answer:20-n,speak:`${n} plus combien égale 20 ?`,nudge:'Va jusqu\'à 20 : combien de pas ?',hint:`De ${n} à 20, il y a ${20-n} pas. ${n} + ${20-n} = 20.`,distract:near(20-n)};}
+  if(d<.8){const k=rnd(1,9),n=k*10;return{tokens:[`${n} +`,'_','= 100'],answer:100-n,speak:`${n} plus combien égale 100 ?`,nudge:'Pense en dizaines : combien de dizaines pour faire 10 dizaines ?',hint:`${k} dizaines et ${10-k} dizaines font 10 dizaines. Donc ${n} + ${100-n} = 100.`,distract:near(100-n)};}
+  const n=rnd(11,98),u=n%10,nx=u?n+10-u:n+10;
+  return{tokens:[`${n} +`,'_','= 100'],answer:100-n,speak:`${n} plus combien égale 100 ?`,nudge:'Va jusqu\'à la dizaine suivante, puis jusqu\'à 100.',hint:u?`Va jusqu'à ${nx} : il manque ${nx-n}. Puis jusqu'à 100 : il manque ${100-nx}. Total : ${100-n}.`:`${n/10} dizaines et il en faut 10 : ${10-n/10} dizaines, donc ${100-n}.`,distract:near(100-n)};}
+
+/* tables */
+function mulHelp(t,b){
+  const lo=Math.min(t,b),hi=Math.max(t,b),c=t*b;
+  if(lo===10||hi===10){const o=lo===10?hi:lo;return['Fois 10, on ajoute un zéro.',`Multiplier par 10, c'est ajouter un zéro : ${o} devient ${c}.`];}
+  if(lo===2)return['Fois 2, c\'est doubler.',`Multiplier par 2, c'est doubler : ${hi} + ${hi} = ${c}.`];
+  if(lo===5)return['Fois 5, c\'est la moitié de fois 10.',`Par 5, prends la moitié de ${hi*10} : c'est ${c}.`];
+  if(lo===9)return['Fois 9, c\'est fois 10 moins une fois le nombre.',`Par 9, calcule ${hi} ${TIMES} 10 = ${hi*10}, puis retire ${hi} : ${c}.`];
+  if(lo===3)return['Fois 3, c\'est doubler, puis ajouter encore une fois le nombre.',`Par 3, double puis ajoute encore ${hi} : ${hi*2} + ${hi} = ${c}.`];
+  if(lo===4)return['Fois 4, c\'est doubler deux fois.',`Par 4, double deux fois : ${hi*2}, puis ${c}.`];
+  if(c===56)return['Pense à la suite 5, 6, 7, 8.',`Retiens la suite 5, 6, 7, 8 : 56 = 7 ${TIMES} 8.`];
+  return['Coupe en deux calculs : fois 5, puis le reste.',`Découpe : ${lo} ${TIMES} 5 = ${lo*5}, puis ${lo} ${TIMES} ${hi-5} = ${lo*(hi-5)}. Total : ${c}.`];
+}
+function distMul(t,b){return[t*(b+1),t*(b-1),(t+1)*b,(t-1)*b,t*b+10,t*b-10];}
+function genTables(tables,mix,d){
+  d=d===undefined?1:d;const bmax=d<.35?5:d<.7?8:10;
+  const facts=[];tables.forEach(t=>{for(let b=2;b<=bmax;b++)facts.push([t,b]);});
+  const f=wpick(facts,x=>factW(x[0],x[1])*(SESS.recent.has(fk(x[0],x[1]))?.04:1));
+  const t=f[0],b=f[1],c=t*b;SESS.recent.add(fk(t,b));
+  const swap=Math.random()<.5,a1=swap?b:t,b1=swap?t:b,r=Math.random(),hp=mulHelp(t,b);
+  const viz=Math.min(t,b)<=5&&c<=50?{k:'mul',r:Math.min(t,b),c:Math.max(t,b)}:null;
+  const base={fact:fk(t,b),distract:distMul(t,b),viz};
+  if(r<mix.mul)return Object.assign(base,{tokens:[`${a1} ${TIMES} ${b1} =`,'_'],answer:c,speak:`${a1} fois ${b1} égale combien ?`,nudge:hp[0],hint:hp[1]});
+  if(r<mix.mul+mix.miss)return Object.assign(base,{tokens:[`${a1} ${TIMES}`,'_',`= ${c}`],answer:b1,speak:`${a1} fois combien égale ${c} ?`,nudge:`Cherche dans la table de ${a1} le résultat ${c}.`,hint:`Dans la table de ${a1} : ${a1} ${TIMES} ${b1} = ${c}. `+hp[1],distract:[b1+1,b1-1,b1+2,b1-2],viz:null});
+  return Object.assign(base,{tokens:[`${c} ${DIV} ${a1} =`,'_'],answer:b1,speak:`${c} divisé par ${a1} égale combien ?`,nudge:`Cherche dans la table de ${a1} : ${a1} fois combien font ${c} ?`,hint:`Dans la table de ${a1} : ${a1} ${TIMES} ${b1} = ${c}, donc ${c} ${DIV} ${a1} = ${b1}.`,distract:[b1+1,b1-1,b1+2,b1-2],viz:null});
+}
+function genDivision(d){d=DD(d);const tb=d<.4?[2,5,10]:d<.7?[2,3,4,5,10]:ALLT.concat([10]);return genTables(tb,{mul:0,miss:.15},d<.4?.5:1);}
+function genTens(d){d=DD(d);
+  if(d<.4){const n=rnd(2,9);return{tokens:[`${n} ${TIMES} 10 =`,'_'],answer:n*10,speak:`${n} fois 10 égale combien ?`,nudge:'Fois 10, on ajoute un zéro à droite.',hint:`${n} dizaines, c'est ${n*10}.`};}
+  if(d<.7){const n=rnd(10,40);return{tokens:[`${n} ${TIMES} 10 =`,'_'],answer:n*10,speak:`${n} fois 10 égale combien ?`,nudge:'Fois 10, on ajoute un zéro à droite.',hint:`Fois 10, on décale d'un rang : ${n} devient ${n*10}.`};}
+  const r=Math.random();
+  if(r<.4){const n=rnd(2,9);return{tokens:[`${n} ${TIMES} 100 =`,'_'],answer:n*100,speak:`${n} fois 100 égale combien ?`,nudge:'Fois 100, on ajoute deux zéros.',hint:`Fois 100, on ajoute deux zéros : ${n} devient ${n*100}.`};}
+  if(r<.8){const a=rnd(2,5),k=rnd(2,5);return{tokens:[`${a} ${TIMES} ${k*10} =`,'_'],answer:a*k*10,speak:`${a} fois ${k*10} égale combien ?`,nudge:'Calcule sans le zéro, puis remets-le.',hint:`${a} ${TIMES} ${k} = ${a*k}, puis on ajoute un zéro : ${a*k*10}.`};}
+  const n=rnd(2,40)*10;return{tokens:[`${n} ${DIV} 10 =`,'_'],answer:n/10,speak:`${n} divisé par 10 égale combien ?`,nudge:'Divisé par 10, on enlève un zéro.',hint:`Divisé par 10, on enlève un zéro : ${n} devient ${n/10}.`};}
+function genHoles(d){d=DD(d);const r=Math.random();
+  if(r<.3){const t=rnd(2,5),b=rnd(2,6);return{tokens:['_',`${TIMES} ${t} = ${t*b}`],answer:b,speak:`Combien fois ${t} égale ${t*b} ?`,nudge:`Cherche dans la table de ${t}.`,hint:`Dans la table de ${t} : ${t} ${TIMES} ${b} = ${t*b}.`,fact:fk(t,b)};}
+  if(r<.55){const n=rnd(11,95);return{tokens:['_',`+ ${n} = 100`],answer:100-n,speak:`Combien plus ${n} égale 100 ?`,nudge:'Cherche ce qu\'il manque pour arriver à 100.',hint:`Il manque ${100-n} pour aller de ${n} à 100.`};}
+  if(r<.8){const a=rnd(20,90),b=rnd(11,a-3);return{tokens:['_',`${MINUS} ${b} = ${a-b}`],answer:a,speak:`Combien moins ${b} égale ${a-b} ?`,nudge:'Fais l\'opération inverse : additionne.',hint:`Pour retrouver le départ, additionne : ${a-b} + ${b} = ${a}.`};}
+  const q=rnd(2,6),dv=rnd(2,6);return{tokens:[`${q*dv} ${DIV}`,'_',`= ${q}`],answer:dv,speak:`${q*dv} divisé par combien égale ${q} ?`,nudge:'Cherche dans la table : fois combien ?',hint:`${dv} ${TIMES} ${q} = ${q*dv}.`,fact:fk(q,dv)};}
+function genProblem(d){
+  const n=name(),k=rnd(1,6),N='Lis bien : faut-il ajouter, enlever ou partager ?';
+  if(k===1){const a=rnd(2,6),b=rnd(2,6);return{lead:`Une fusée a ${a} hublots par étage et ${b} étages.`,tokens:['Combien de hublots en tout ?','_'],answer:a*b,speak:`Une fusée a ${a} hublots par étage et ${b} étages. Combien de hublots en tout ?`,nudge:N,hint:`${b} étages de ${a} hublots : ${a} ${TIMES} ${b} = ${a*b}.`,fact:fk(a,b)};}
+  if(k===2){const a=rnd(2,6),b=rnd(2,6);return{lead:`${n} range ${a} cartes planètes dans chaque boîte et remplit ${b} boîtes.`,tokens:['Combien de cartes en tout ?','_'],answer:a*b,speak:`${n} range ${a} cartes planètes dans chaque boîte et remplit ${b} boîtes. Combien de cartes en tout ?`,nudge:N,hint:`${a} ${TIMES} ${b} = ${a*b}.`,fact:fk(a,b)};}
+  if(k===3){let a,b;do{a=rnd(25,69);b=rnd(15,39);}while(a%10+b%10<10||a+b>99);return{lead:`Une station accueille ${a} astronautes. ${b} autres arrivent.`,tokens:['Combien sont-ils maintenant ?','_'],answer:a+b,speak:`Une station accueille ${a} astronautes. ${b} autres arrivent. Combien sont-ils maintenant ?`,nudge:N,hint:`${a} + ${b} : ${a} + ${b-b%10} = ${a+b-b%10}, puis + ${b%10} = ${a+b}.`};}
+  if(k===4){const a=rnd(41,99),b=rnd(12,a-20);return{lead:`${a} étoiles brillent dans le ciel. ${b} s'éteignent.`,tokens:['Combien brillent encore ?','_'],answer:a-b,speak:`${a} étoiles brillent dans le ciel. ${b} s'éteignent. Combien brillent encore ?`,nudge:N,hint:`${a} ${MINUS} ${b} = ${a-b}.`};}
+  if(k===5){const b=rnd(2,5),q=rnd(2,6);return{lead:`${b*q} cristaux sont partagés à parts égales entre ${b} astronautes.`,tokens:['Combien de cristaux chacun ?','_'],answer:q,speak:`${b*q} cristaux sont partagés à parts égales entre ${b} astronautes. Combien de cristaux chacun ?`,nudge:N,hint:`Cherche ${b} ${TIMES} ? = ${b*q}. C'est ${q}.`,fact:fk(b,q)};}
+  const m=rnd(2,9)*10,f=rnd(20,60);return{lead:`Il faut ${m+f} litres de carburant. Le réservoir en contient ${f}.`,tokens:['Combien de litres manque-t-il ?','_'],answer:m,speak:`Il faut ${m+f} litres de carburant. Le réservoir en contient ${f}. Combien de litres manque-t-il ?`,nudge:N,hint:`${m+f} ${MINUS} ${f} = ${m}.`};
+}
+const ALLT=[2,3,4,5,6,7,8,9];
+function genBoss(d){const r=Math.random();if(r<.3)return genProblem(d);if(r<.5)return genHoles(d);return pick([()=>genTables(ALLT,{mul:.5,miss:.25},1),genMix,genCompl,genTens,genDouble,genDivision])(DD(d));}
+const SKILLS=[
+ {id:'a1',title:'Additions simples',gen:genAddEasy},
+ {id:'a2',title:'Additions moyennes',gen:genAddMid},
+ {id:'a3',title:'Additions plus complexes',gen:genAddHard},
+ {id:'s1',title:'Soustractions simples',gen:genSubEasy},
+ {id:'s2',title:'Soustractions plus complexes',gen:genSubHard},
+ {id:'as',title:'Additions et soustractions',gen:genMix},
+ {id:'dh',title:'Doubles et moitiés',gen:genDouble},
+ {id:'cp',title:'Compléments à 10, 20 et 100',gen:genCompl},
+ {id:'t1',title:'Tables de 2, 5 et 10',gen:d=>genTables([2,5,10],{mul:.7,miss:.15},d)},
+ {id:'t2',title:'Tables de 3 et 4',gen:d=>genTables([3,4],{mul:.7,miss:.15},d)},
+ {id:'t3',title:'Tables de 6 et 7',gen:d=>genTables([6,7],{mul:.7,miss:.15},d)},
+ {id:'t4',title:'Tables de 8 et 9',gen:d=>genTables([8,9],{mul:.7,miss:.15},d)},
+ {id:'te',title:'Multiplier par 10 et 100',gen:genTens},
+ {id:'tm',title:'Toutes les tables',gen:d=>genTables(ALLT,{mul:.5,miss:.25},d)},
+ {id:'dv',title:'Divisions',gen:genDivision},
+ {id:'bo',title:'Problèmes éclair',gen:genBoss,noBlitz:true}
+];
+SKILLS.forEach((s,i)=>{s.planet=PLANETS[i].n;});
+const PLACE=[()=>genAddEasy(.2),()=>genAddEasy(.9),()=>genAddMid(.2),()=>genAddMid(.9),()=>genAddHard(.5),()=>genSubEasy(.3),()=>genSubEasy(.9),()=>genSubHard(.5),()=>genAddHard(.95),()=>genSubHard(.95),()=>genTables([2,5,10],{mul:1,miss:0},.6),()=>genTables([3,4],{mul:1,miss:0},.8)];
+function genPlacement(i){return PLACE[i%PLACE.length]();}
+function makeChoices(q){
+  const ans=q.answer,seen=new Set([ans]),out=[],tol=Math.max(3,Math.round(ans*.4));
+  const add=(v,strict)=>{if(v>=0&&!seen.has(v)&&out.length<3&&(!strict||Math.abs(v-ans)<=tol)){seen.add(v);out.push(v);}};
+  shuffle(q.distract||[]).forEach(v=>add(v,true));
+  shuffle([1,-1,2,-2,3,-3,5,-5,10,-10]).forEach(d=>add(ans+d,true));
+  shuffle([1,-1,2,-2,3,-3,4,-4,6]).forEach(d=>add(ans+d,false));
+  return shuffle([ans].concat(out));
+}
+
+/* ---------- confettis ---------- */
+function confetti(){if(reduced())return;const box=$('#confetti');const cols=['#D62839','#7C9EFF','#F4F6FF','#FFC93C','#2A5CE6','#FF8791'];let h='';for(let i=0;i<46;i++){h+=`<i style="left:${rnd(0,100)}%;background:${pick(cols)};animation-duration:${(1.8+Math.random()*1.6).toFixed(2)}s;animation-delay:${(Math.random()*.5).toFixed(2)}s;transform:rotate(${rnd(0,180)}deg)"></i>`;}box.innerHTML=h;setTimeout(()=>{box.innerHTML='';},3800);}
+
+/* ---------- vues principales ---------- */
+const view=$('#view'),nav=$('#nav'),ov=$('#overlay');
+let TAB='map',firstMap=true;
+function renderNav(){
+  const pt=pendTotal(),t=[['map','Carte',ICON.map],['loot','Trésors',ICON.gem],['blitz','Éclair',ICON.bolt],['parents','Parents',ICON.chart]];
+  nav.innerHTML='<div class="in">'+t.map(x=>`<button class="tab" data-act="tab" data-t="${x[0]}" ${TAB===x[0]?'aria-current="page"':''}>${x[2]}<span>${x[1]}</span>${x[0]==='loot'&&pt?`<i class="dot" aria-hidden="true"></i><span class="sr">${pt} récompense${pt>1?'s':''} prête${pt>1?'s':''}</span>`:''}</button>`).join('')+'</div>';
+}
+function setTab(t,focus){TAB=t;if(t!=='parents')lockParents();renderNav();({map:renderMap,loot:renderLoot,blitz:renderBlitzTab,parents:()=>(S.pin&&!parentOK)?renderPin():renderParents()})[t]();view.classList.remove('view-in');void view.offsetWidth;view.classList.add('view-in');if(focus!==false){const h=$('h1',view);if(h){h.tabIndex=-1;h.focus({preventScroll:true});}window.scrollTo(0,0);}}
+function chips(){return`<div class="chips"><span class="chip fire" aria-label="Série de ${streakNow()} jours">${ICON.flame}<span aria-hidden="true">${streakNow()}</span></span><span class="chip star" aria-label="${totalStars()} étoiles">${ICON.star}<span aria-hidden="true">${totalStars()}</span></span><span class="chip gem" aria-label="${S.cr} cristaux">${ICON.gem}<span aria-hidden="true">${S.cr}</span></span></div>`;}
+function speechLine(){
+  const n=esc(name());
+  if(!S.xp)return`Bienvenue à bord, ${n}. Choisis une planète pour décoller.`;
+  if(dailyXp()>=DAILY_GOAL)return`Objectif du jour atteint, ${n}. Tu peux continuer si tu veux.`;
+  if(streakNow()>=3)return`${streakNow()} jours de suite. Les tables n'ont qu'à bien se tenir.`;
+  return pick([`Prêt pour la prochaine mission, ${n} ?`,`Une planète t'attend. On y va ?`,`Chaque calcul rapproche la fusée de la prochaine étoile.`]);
+}
+function renderMap(){
+  const L=levelInfo(),W=360,PITCH=165,PAD=95,n=SKILLS.length,Hh=PAD*2+(n-1)*PITCH;
+  const off=[0,74,0,-74],pts=SKILLS.map((s,i)=>({x:180+off[i%4],y:PAD+i*PITCH}));
+  const seg=(a,b)=>`C${a.x} ${a.y+85} ${b.x} ${b.y-85} ${b.x} ${b.y}`;
+  let dAll=`M${pts[0].x} ${pts[0].y}`,dDone=dAll;const reach=Math.min(n-1,S.unlocked-1);
+  for(let i=0;i<n-1;i++){dAll+=seg(pts[i],pts[i+1]);if(i<reach)dDone+=seg(pts[i],pts[i+1]);}
+  let cur=-1;SKILLS.forEach((s,i)=>{if(i+1<=S.unlocked&&!S.stars[s.id])cur=i;});
+  const stops=SKILLS.map((s,i)=>{
+    const open=i+1<=S.unlocked,st=S.stars[s.id]||0,isCur=i===cur;
+    const label=`${s.planet}, ${s.title}. ${open?(st?st+' étoile'+(st>1?'s':'')+' sur 3':'à découvrir'):'verrouillée'}`;
+    return`<div class="stop" style="left:${(pts[i].x/W*100).toFixed(2)}%;top:${(pts[i].y/Hh*100).toFixed(2)}%;--k:${Math.min(i,6)}">
+      ${isCur?'<span class="go-bubble" aria-hidden="true">Décoller</span>':''}
+      <button class="planet ${isCur?'cur':''}" data-act="start" data-i="${i}" ${open?'':'disabled'} aria-label="${esc(label)}" ${isCur?'id="curPlanet"':''}>${planetSVG(i)}${open?'':`<span class="lock">${ICON.lock}</span>`}</button>
+      <span class="nm">${s.planet}</span><span class="tt">${s.title}</span>
+      <span class="stars3" aria-hidden="true">${[1,2,3].map(k=>`<span class="${k<=st?'on':''}">${ICON.star}</span>`).join('')}</span></div>`;}).join('');
+  const goal=Math.min(1,dailyXp()/DAILY_GOAL);
+  view.innerHTML=`
+   <header class="top"><div aria-hidden="true">${mascot(S.xp?'happy':'cheer',64)}</div><div class="hi"><h1>Salut ${esc(name())}</h1></div>${chips()}</header>
+   ${xferCard()}
+   <div class="lvl"><div class="lvl-row"><span>Grade <b>${L.name}</b></span><span>${L.next?`encore ${L.left} XP pour ${L.next}`:'Grade maximum'}</span></div><div class="meter" role="progressbar" aria-label="Progression du grade" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(L.pct*100)}"><i style="width:${Math.round(L.pct*100)}%"></i></div></div>
+   <div class="goal card"><div class="row"><b>Objectif du jour</b><span>${dailyXp()>=DAILY_GOAL?'Atteint':Math.min(dailyXp(),DAILY_GOAL)+' sur '+DAILY_GOAL+' XP'}</span></div><div class="meter red" role="progressbar" aria-label="Objectif du jour" aria-valuemin="0" aria-valuemax="${DAILY_GOAL}" aria-valuenow="${Math.min(dailyXp(),DAILY_GOAL)}"><i style="width:${Math.round(goal*100)}%"></i></div></div>
+   ${nextRewardCard()}
+   <div class="speech"><div aria-hidden="true">${mascot('neutral',52)}</div><div class="b">${speechLine()}</div></div>
+   ${(!S.placed&&!S.placeDismissed&&S.unlocked===1)?`<div class="card place"><p><b>Déjà fort en calcul ?</b> Un petit test de 12 questions peut t'envoyer directement plus loin.</p><div style="display:grid;gap:6px"><button class="btn red" data-act="place">Tester</button><button class="btn ghost" data-act="placeno" style="min-height:44px;padding:4px 12px;font-size:14px">Plus tard</button></div></div>`:''}
+   <h2 class="sr">Carte des planètes</h2>
+   <div class="mapwrap" style="aspect-ratio:${W}/${Hh}"><svg class="path" viewBox="0 0 ${W} ${Hh}" preserveAspectRatio="none" aria-hidden="true"><path d="${dAll}" fill="none" stroke="#33489B" stroke-width="6" stroke-dasharray="2 14" stroke-linecap="round"/><path d="${dDone}" fill="none" stroke="#7C9EFF" stroke-width="6" stroke-linecap="round"/></svg>${stops}</div>`;
+  if(firstMap){firstMap=false;const c=$('#curPlanet');if(c&&c.scrollIntoView)setTimeout(()=>{try{c.scrollIntoView({block:'center'});}catch(e){}},30);}
+}
+function renderBlitzTab(){
+  view.innerHTML=`<header class="top"><div class="hi"><h1 class="sr">Défi éclair</h1></div>${chips()}</header>
+  <div class="hero"><div aria-hidden="true">${mascot('cheer',120)}</div><h1>Défi éclair</h1><p>60 secondes pour résoudre autant de calculs que possible. Pas de pénalité, un seul but : battre ton record.</p>
+  <div class="rec">${ICON.star}<span>Record : ${S.best}</span></div>
+  <button class="btn red block" data-act="blitz" style="max-width:340px;margin-top:6px">Partir</button>
+  <p class="small">Les questions viennent des planètes déjà ouvertes.</p></div>`;
+}
+function factStatus(k){const f=S.facts[k];if(!f||!f.s)return['new','pas encore vue'];const acc=f.c/f.s;if(acc<.6||f.l===0)return['weak','à revoir'];if(acc<.85||f.s<3)return['mid','en progrès'];return['strong','maîtrisée'];}
+function renderParents(){
+  const acc=S.answered?Math.round(S.correct/S.answered*100):0,done=Object.values(S.stars).filter(Boolean).length;
+  let head='<tr><th scope="col"><span class="sr">Table</span></th>';for(let b=2;b<=10;b++)head+=`<th scope="col">${b}</th>`;head+='</tr>';
+  let rows='';for(let a=2;a<=10;a++){rows+=`<tr><th scope="row">${a}</th>`;for(let b=2;b<=10;b++){const k=fk(a,b),st=factStatus(k);rows+=`<td data-s="${st[0]}" aria-label="${a} fois ${b} égale ${a*b}, ${st[1]}">${a*b}</td>`;}rows+='</tr>';}
+  const weak=Object.keys(S.facts).map(k=>({k,f:S.facts[k]})).filter(x=>x.f.s>=1&&(x.f.c/x.f.s<.85||x.f.l===0)).sort((x,y)=>(x.f.c/x.f.s)-(y.f.c/y.f.s)||y.f.s-x.f.s).slice(0,6);
+  const wl=weak.length?weak.map(x=>{const[a,b]=x.k.split('x').map(Number);return`<li><span>${a} ${TIMES} ${b} = ${a*b}</span><span>${x.f.c} juste${x.f.c>1?'s':''} sur ${x.f.s}</span></li>`;}).join(''):'<li><span>Rien à signaler pour le moment</span><span>Jouer quelques missions suffit</span></li>';
+  view.innerHTML=`<header class="top"><div class="hi"><h1>Coin parents</h1></div>${chips()}</header>
+  <p class="small" style="margin-top:8px">Suivi du travail de ${esc(name())}. Les données restent sur cet appareil.</p>
+  ${parentTop()}
+  <section class="sect" aria-labelledby="h-st"><h2 id="h-st">Résumé</h2><div class="stats">
+   <div class="stat"><b>${S.answered}</b><span>calculs résolus</span></div><div class="stat"><b>${acc}%</b><span>de réussite du premier coup</span></div>
+   <div class="stat"><b>${done} sur ${SKILLS.length}</b><span>planètes terminées</span></div><div class="stat"><b>${S.best}</b><span>record au défi éclair</span></div></div></section>
+  <section class="sect" aria-labelledby="h-hm"><h2 id="h-hm">Carte des tables</h2><div class="heatwrap"><table class="heat"><caption class="sr">Maîtrise de chaque multiplication de 2 à 10</caption><thead>${head}</thead><tbody>${rows}</tbody></table></div>
+   <div class="legend"><span><i style="background:var(--surface);border-color:var(--line)"></i>Pas encore vue</span><span><i style="border:2px dashed var(--red-l);background:#5A1220"></i>À revoir</span><span><i style="background:#2C4AB0"></i>En progrès</span><span><i style="background:var(--blue);border-color:var(--blue-l)"></i>Maîtrisée</span></div></section>
+  <section class="sect" aria-labelledby="h-sk"><h2 id="h-sk">Parcours par thème</h2><ul class="list">${SKILLS.map((k,i)=>{const st=S.stars[k.id]||0,x=S.sk[k.id],open=i+1<=S.unlocked;return`<li><span>${esc(k.title)}</span><span>${!open?'à venir':(x&&x.s?Math.round(x.c/x.s*100)+'% de réussite, ':'')+(st?st+' étoile'+(st>1?'s':'')+' sur 3':'à découvrir')}</span></li>`;}).join('')}</ul></section>
+  <section class="sect" aria-labelledby="h-wk"><h2 id="h-wk">Calculs à revoir</h2><ul class="list">${wl}</ul></section>
+  ${parentRewards()}
+  <section class="sect card" aria-labelledby="h-se"><h2 id="h-se">Réglages</h2>
+   <div class="set"><label for="nm">Prénom</label><input class="txt" id="nm" maxlength="12" value="${esc(S.name)}" autocomplete="off"></div>
+   <div class="set"><label id="l-snd">Sons</label><button class="sw" role="switch" aria-labelledby="l-snd" aria-checked="${S.sound}" data-act="snd"></button></div>
+   <div class="set"><label id="l-mo">Animations réduites</label><button class="sw" role="switch" aria-labelledby="l-mo" aria-checked="${reduced()}" data-act="mo"></button></div>
+   <div class="set"><label>Recommencer à zéro</label><button class="btn ghost" data-act="reset" id="rst" style="min-height:44px;padding:6px 14px;font-size:14px">Effacer</button></div></section>`;
+}
+
+/* ---------- séance ---------- */
+let L=null,tmr=null;
+const D=ms=>reduced()?0:ms;
+const after=(ms,fn)=>setTimeout(fn,D(ms));
+const lessonEl=()=>$('.lesson',ov);
+function vizHTML(v){
+  if(!v)return'';
+  const dot=(c)=>`<i class="d ${c}"></i>`;
+  if(v.k==='mul'){let h='';for(let i=0;i<v.r*v.c;i++)h+=dot('');return`<div class="viz grid" style="--c:${v.c}" aria-hidden="true">${h}</div>`;}
+  const grp=(n,c)=>{let h='';for(let i=0;i<n;i++){h+=dot(c)+((i+1)%5===0&&i+1<n?'<b class="gap"></b>':'');}return h;};
+  if(v.k==='add')return`<div class="viz" aria-hidden="true">${grp(v.a,'')}<b class="gap plus">+</b>${grp(v.b,'r')}</div>`;
+  if(v.k==='sub')return`<div class="viz" aria-hidden="true">${grp(v.a-v.b,'')}<b class="gap"></b>${grp(v.b,'x')}</div>`;
+  return'';
+}
+function shell(ox,oy){
+  ov.hidden=false;ov.classList.remove('closing');document.documentElement.classList.add('noscroll');
+  ov.style.setProperty('--ox',(ox==null?innerWidth/2:ox)+'px');ov.style.setProperty('--oy',(oy==null?innerHeight/2:oy)+'px');
+  const label=L.mode==='blitz'?'Défi éclair':L.mode==='placement'?'Test de placement':'Mission '+L.skill.planet;
+  const lamp=L.mode==='lesson'?`<button class="icon-btn lamp" data-act="hint" id="lamp" aria-label="Demander un indice">${ICON.bulb}</button>`:'';
+  ov.innerHTML=`<div class="lesson reveal" role="dialog" aria-modal="true" aria-label="${label}">
+   <div class="l-top"><button class="icon-btn" data-act="quit" aria-label="Quitter">${ICON.x}</button>
+   ${L.mode==='blitz'?`<div class="timer" aria-hidden="true"><i id="tbar"></i></div><div class="score" aria-hidden="true">${ICON.bolt}<b id="sc">0</b></div>`:`<div class="bar" id="bar" role="progressbar" aria-label="Progression" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div><div class="combo" id="combo" hidden aria-hidden="true">${ICON.flame}<b>0</b></div>${lamp}`}</div>
+   <div class="l-body"><div class="qwrap" id="qwrap">${L.mode==='blitz'?'':`<div class="mk" aria-hidden="true">${mascot('neutral',92)}</div>`}<p class="lead" id="lead"></p><div class="eq" id="eq" aria-hidden="true"></div><div class="hintcard" id="hint" role="note" hidden></div><div class="tip" id="tip" hidden></div></div></div>
+   <div class="l-input" id="inp"></div><div class="fx" id="fx" aria-hidden="true"></div><div class="sheet" id="sheet" hidden></div>
+   <div class="sr" id="sr" aria-live="polite"></div><div class="sr" id="sr2" aria-live="polite"></div></div>`;
+}
+function startSession(mode,idx,ox,oy){
+  closeConfirm();
+  L={mode,idx,skill:mode==='lesson'?SKILLS[idx]:null,total:mode==='placement'?12:10,gen:0,answered:0,resolved:0,missed:0,firstTry:0,requeued:0,requeue:[],q:null,typed:'',sel:null,busy:false,prog:0,xp:0,streak:0,score:0,done:false,leaving:false};
+  SESS.recent=new Set();
+  if(mode==='blitz'){L.pool=SKILLS.slice(0,Math.max(1,S.unlocked)).filter(s=>!s.noBlitz);if(!L.pool.length)L.pool=[SKILLS[0]];L.remain=60000;L.endAt=Date.now()+L.remain;}
+  shell(ox,oy);
+  if(mode==='blitz'){clearInterval(tmr);tmr=setInterval(tick,150);}
+  nextQ();
+}
+function genFor(){
+  let q;
+  if(L.mode==='placement')q=genPlacement(L.gen);
+  else if(L.mode==='blitz'){let t=0;do{const s=pick(L.pool);q=s.gen(Math.random());q.sk=s.id;t++;}while(q.answer>9999&&t<8);}
+  else{q=L.skill.gen(L.total>1?L.gen/(L.total-1):0);q.sk=L.skill.id;}
+  return q;
+}
+function nextQ(){
+  if(!L||L.done)return;
+  let q=null;
+  if(L.requeue.length&&(L.requeue[0].due<=L.answered||L.gen>=L.total)){q=L.requeue.shift().q;q.n=0;q.wrongs=0;q.hinted=false;q.revealed=false;}
+  else if(L.mode==='blitz'||L.gen<L.total){q=genFor();L.gen++;}
+  else return finish();
+  L.q=q;L.typed='';L.sel=null;L.busy=false;L.leaving=false;
+  if(!q.mode){q.mode=(L.mode==='lesson'&&q.answer<=1000&&Math.random()<.3)?'choice':'pad';if(q.mode==='choice')q.choices=makeChoices(q);}
+  renderQ();
+}
+function renderQ(){
+  const q=L.q;
+  $('#lead').textContent=q.lead||'';
+  $('#eq').className='eq';
+  $('#eq').innerHTML=q.tokens.map(t=>t==='_'?'<span class="blank" id="blank">?</span>':`<span class="tk${t.length>16?' small-t':''}">${esc(t)}</span>`).join('');
+  const h=$('#hint');h.hidden=true;h.innerHTML='';
+  const sh=$('#sheet');sh.hidden=true;sh.classList.remove('out');
+  const inp=$('#inp');inp.inert=false;
+  const lamp=$('#lamp');if(lamp)lamp.disabled=false;
+  if(q.mode==='choice'){
+    inp.innerHTML=`<div class="choices" role="group" aria-label="Réponses possibles">${q.choices.map(v=>`<button class="choice" data-act="pick" data-v="${v}" aria-pressed="false">${v}</button>`).join('')}</div><button class="btn btn-go" data-act="check" id="go" disabled>Vérifier</button>`;
+  }else{
+    inp.innerHTML=`<div class="pad" role="group" aria-label="Clavier numérique">${[1,2,3,4,5,6,7,8,9,0].map(d=>`<button class="key" data-act="digit" data-d="${d}" aria-label="${d}">${d}</button>`).join('')}<button class="key key-del" data-act="del" aria-label="Effacer le dernier chiffre">${ICON.back}</button><button class="btn btn-go" data-act="check" id="go" disabled>Vérifier</button></div>`;
+  }
+  const tip=$('#tip');
+  if(!S.tipSeen&&L.mode==='lesson'&&L.gen===1&&!q.n){tip.hidden=false;tip.textContent='Tape ta réponse avec les chiffres, puis appuie sur Vérifier. Si tu cherches, l\'ampoule en haut te donne un indice.';}else tip.hidden=true;
+  const n=L.mode==='blitz'?'':`Question ${Math.min(L.resolved+1,L.total)} sur ${L.total}. `;
+  $('#sr').textContent='';setTimeout(()=>{const s=$('#sr');if(s)s.textContent=n+q.speak;},40);
+  const w=$('#qwrap');w.classList.remove('qin');void w.offsetWidth;w.classList.add('qin');
+  setBar();
+}
+function dismissTip(){if(S.tipSeen)return;S.tipSeen=true;save();const t=$('#tip');if(t)t.hidden=true;}
+function setBar(){
+  if(L.mode==='blitz')return;
+  const den=L.total+L.requeued;L.prog=Math.max(L.prog,L.resolved/den);
+  const b=$('#bar');if(b){b.setAttribute('aria-valuenow',Math.round(L.prog*100));$('i',b).style.width=Math.round(L.prog*100)+'%';}
+}
+function updateCombo(){const c=$('#combo');if(!c)return;if(L.streak>=2){c.hidden=false;$('b',c).textContent=L.streak;c.classList.remove('bump');void c.offsetWidth;c.classList.add('bump');}else c.hidden=true;}
+function updateBlank(){
+  const b=$('#blank'),q=L.q;if(!b)return;
+  const v=q.mode==='choice'?(L.sel===null?'':String(L.sel)):L.typed;
+  b.textContent=v===''?'?':v;b.classList.toggle('has',v!=='');
+  const go=$('#go');if(go)go.disabled=(v==='');
+  const s2=$('#sr2');if(s2)s2.textContent=v===''?'':'Ta réponse : '+v;
+}
+function digit(d){if(!L||L.busy||L.q.mode!=='pad')return;dismissTip();if(L.typed.length>=4)return;L.typed=(L.typed==='0'?'':L.typed)+d;updateBlank();}
+function del(){if(!L||L.busy||L.q.mode!=='pad')return;L.typed=L.typed.slice(0,-1);updateBlank();}
+const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
+function pickChoice(v){if(!L||L.busy)return;dismissTip();L.sel=Number(v);$$('.choice').forEach(c=>c.setAttribute('aria-pressed',String(c.dataset.v===String(v))));updateBlank();}
+function showHint(){
+  if(!L||L.busy||!L.q||L.mode!=='lesson')return;
+  dismissTip();const q=L.q,h=$('#hint');
+  q.hinted=true;
+  h.innerHTML=`<div class="hc-t">${ICON.bulb}<b>Indice</b></div><p>${esc(q.nudge||'Prends ton temps et décompose le calcul en petites étapes.')}</p>${vizHTML(q.viz)}`;
+  h.hidden=false;h.classList.remove('qin');void h.offsetWidth;h.classList.add('qin');
+  const s=$('#sr2');if(s)s.textContent='Indice : '+(q.nudge||'');
+}
+function check(){
+  if(!L||L.busy||L.done)return;
+  const q=L.q,val=q.mode==='choice'?L.sel:(L.typed===''?null:Number(L.typed));
+  if(val===null)return;
+  dismissTip();L.busy=true;
+  const ok=val===q.answer,firstAttempt=!q.n;q.n=(q.n||0)+1;
+  if(firstAttempt&&!q.rec){q.rec=true;S.answered++;if(ok)S.correct++;recFact(q.fact,ok);recSk(q.sk,ok);}
+  L.answered++;
+  const eq=$('#eq'),bl=$('#blank');
+  if(L.mode==='blitz')return blitzResult(ok,q,bl,eq);
+  if(ok)return success(q,firstAttempt,bl,eq);
+  wrong(q,bl,eq);
+}
+function praiseFor(q){
+  const s=L.streak;
+  if(q.wrongs)return['Tu l\'as trouvé','Tu as continué à chercher et tu as réussi. C\'est ça, apprendre.'];
+  if(s>=7)return['Extraordinaire',`${s} bonnes réponses de suite. Zip n'en revient pas.`];
+  if(s>=5)return['Incroyable',`${s} bonnes réponses de suite.`];
+  if(s>=3)return['Quelle série',`${s} de suite, tu es en feu.`];
+  return[pick(['Bravo','Exact','Bien joué','Super calcul','Parfait']),pick(['Réponse juste.','Tu calcules vite.','Tu progresses bien.','Ça, c\'est fait.'])];
+}
+function success(q,first,bl,eq){
+  let xp;if(first){L.firstTry++;xp=q.hinted?6:10;L.streak++;}else{xp=4;L.streak=0;}
+  L.xp+=xp;L.resolved++;
+  sfx.ok(L.streak);buzz(15);
+  bl.classList.add('ok');eq.classList.add('flash-ok');
+  reward(bl,xp);updateCombo();
+  const bar=$('#bar');if(bar){bar.classList.remove('pulse');void bar.offsetWidth;bar.classList.add('pulse');}
+  save();setBar();
+  const p=praiseFor(q);
+  showSheet('good',{title:p[0],text:p[1],xp,mascot:'cheer'});
+}
+function wrong(q,bl,eq){
+  q.wrongs=(q.wrongs||0)+1;
+  if(!q.counted){q.counted=true;L.missed++;}
+  L.streak=0;updateCombo();sfx.bad();
+  bl.classList.add('soft');eq.classList.add('wobble');
+  save();
+  if(L.mode==='placement'){L.resolved++;return reveal(q);}
+  if(q.wrongs===1)return showSheet('help',{title:pick(['Presque','Tu y es presque','Bien essayé']),text:'Ce n\'est pas grave, on cherche ensemble. Voici un indice :',nudge:q.nudge,viz:q.viz,mascot:'kind',retry:true});
+  reveal(q);
+}
+function reveal(q){
+  let rq=false;
+  if(!q.revealed){q.revealed=true;
+    if(L.mode==='lesson'&&!q.retried){q.retried=true;rq=true;L.requeued++;L.requeue.push({q,due:L.answered+3});}else if(L.mode==='lesson'){L.resolved++;}}
+  setBar();
+  showSheet('help',{title:L.mode==='placement'?'Pas de souci':'Voici comment faire',text:`La réponse est ${q.answer}.`,hint:q.hint,viz:q.viz,mascot:'kind',reassure:rq?'Se tromper aide le cerveau à apprendre. On la reverra tout à l\'heure pour s\'entraîner.':''});
+}
+function showSheet(kind,o){
+  const sh=$('#sheet'),inp=$('#inp');inp.inert=true;const lamp=$('#lamp');if(lamp)lamp.disabled=true;
+  sh.className='sheet '+(kind==='good'?'good':'help');sh.hidden=false;
+  let body='';
+  if(kind==='good')body=`<div class="msg"><div class="mkb" aria-hidden="true">${mascot('cheer',72)}</div><div class="tx"><h2>${esc(o.title)}</h2><p>${esc(o.text)}</p></div><div class="xpchip" aria-label="${o.xp} points d'expérience">${ICON.star}<span>+${o.xp}</span></div></div><button class="btn block" data-act="next" id="nx">Continuer</button>`;
+  else{
+    const lines=[];
+    if(o.text)lines.push(`<p>${esc(o.text)}</p>`);
+    if(o.nudge)lines.push(`<p class="nudge">${esc(o.nudge)}</p>`);
+    if(o.hint)lines.push(`<p class="expl">${esc(o.hint)}</p>`);
+    if(o.reassure)lines.push(`<p class="small2">${esc(o.reassure)}</p>`);
+    const vz=o.viz?vizHTML(o.viz):'';
+    body=`<div class="msg"><div class="mkb" aria-hidden="true">${mascot('kind',64)}</div><div class="tx"><h2>${esc(o.title)}</h2>${lines.join('')}</div></div>${vz}${o.retry?`<div class="two"><button class="btn block" data-act="retry" id="retry">Réessayer</button><button class="btn ghost2 block" data-act="explain" id="explain">Voir l'explication</button></div>`:`<button class="btn block" data-act="next" id="nx">Continuer</button>`}`;
+  }
+  sh.innerHTML=`<div class="in">${body}</div>`;
+  const plain=sh.textContent.replace(/\s+/g,' ');
+  $('#sr').textContent='';setTimeout(()=>{const s=$('#sr');if(s)s.textContent=plain;},30);
+  const f=$('#nx')||$('#retry');if(f)f.focus({preventScroll:true});
+}
+function closeSheet(cb){
+  const sh=$('#sheet');if(!sh||sh.hidden){cb&&cb();return;}
+  sh.classList.add('out');after(190,()=>{sh.hidden=true;sh.classList.remove('out');cb&&cb();});
+}
+function retry(){
+  if(!L||L.leaving)return;L.leaving=true;
+  closeSheet(()=>{
+    if(!L)return;L.leaving=false;L.busy=false;L.typed='';L.sel=null;
+    const eq=$('#eq');eq.classList.remove('wobble');
+    const bl=$('#blank');bl.className='blank';bl.textContent='?';
+    $$('.choice').forEach(c=>c.setAttribute('aria-pressed','false'));
+    $('#inp').inert=false;const go=$('#go');if(go)go.disabled=true;
+    const lamp=$('#lamp');if(lamp)lamp.disabled=false;
+    showHint();
+    const f=$('.key')||$('.choice');if(f)f.focus({preventScroll:true});
+    $('#sr').textContent='Réessaie. '+(L.q.nudge||'');
+  });
+}
+function explain(){if(!L||L.leaving)return;reveal(L.q);}
+function advance(){if(!L||L.leaving||L.done)return;L.leaving=true;closeSheet(()=>{if(L)nextQ();});}
+/* effets de récompense */
+function reward(bl,xp){
+  if(reduced()||!bl)return;
+  const fx=$('#fx');if(!fx)return;
+  const r=bl.getBoundingClientRect(),fr=fx.getBoundingClientRect(),cx=r.left+r.width/2-fr.left,cy=r.top+r.height/2-fr.top;
+  const n=10+Math.min(L.streak,5)*3,cols=['#FFC93C','#7C9EFF','#FF8791','#FFFFFF'];let h='';
+  for(let i=0;i<n;i++){const a=(i/n)*Math.PI*2+Math.random()*.5,dist=55+Math.random()*80;h+=`<i class="sp" style="left:${cx}px;top:${cy}px;--dx:${(Math.cos(a)*dist).toFixed(0)}px;--dy:${(Math.sin(a)*dist).toFixed(0)}px;background:${cols[i%4]};animation-delay:${rnd(0,90)}ms"></i>`;}
+  h+=`<span class="plus" style="left:${cx}px;top:${cy}px">+${xp}</span><i class="ring" style="left:${cx}px;top:${cy}px"></i>`;
+  fx.insertAdjacentHTML('beforeend',h);
+  setTimeout(()=>{if(fx)fx.innerHTML='';},1200);
+  if(L.streak>0&&L.streak%5===0)confetti();
+}
+function blitzResult(ok,q,bl,eq){
+  if(ok){L.score++;$('#sc').textContent=L.score;sfx.ok(Math.min(L.score,6));bl.classList.add('ok');eq.classList.add('flash-ok');reward(bl,1);setTimeout(()=>{if(L&&!L.done)nextQ();},reduced()?120:260);}
+  else{sfx.bad();bl.textContent=q.answer;bl.classList.add('soft','has');eq.classList.add('wobble');$('#sr').textContent='La réponse était '+q.answer;setTimeout(()=>{if(L&&!L.done)nextQ();},1100);}
+}
+function tick(){
+  if(!L||L.mode!=='blitz'||L.done||L.paused)return;
+  const rem=L.endAt-Date.now();const bar=$('#tbar');if(bar)bar.style.width=Math.max(0,rem/600)+'%';
+  if(rem<=0)finish();
+}
+document.addEventListener('visibilitychange',()=>{
+  if(!L||L.mode!=='blitz'||L.done)return;
+  if(document.hidden){L.paused=true;L.remain=Math.max(0,L.endAt-Date.now());}
+  else if(L.paused&&!$('.scrim',ov)){L.paused=false;L.endAt=Date.now()+L.remain;}
+});
+
+/* ---------- fin de séance ---------- */
+function rewardStep(r,n){const b=pendSnap(),nd=touchStreak();let bonus=0;if(nd&&S.streak>0&&S.streak%7===0)bonus=5;const g=grantCr(n);if(bonus)grantCr(bonus,true);r.cr=g+bonus;r.crBonus=bonus;r.crCap=n>0&&g<n;r.crMax=S.crDay.n>=S.cap+SOFT;r.earned=newlyEarned(b).map(x=>x.name);}
+function finish(){
+  if(!L||L.done)return;L.done=true;clearInterval(tmr);
+  const r={};
+  if(L.mode==='lesson'){
+    const st=L.missed<=2?3:L.missed<=4?2:1,sk=L.skill,prev=S.stars[sk.id]||0,bonus=st*5;
+    S.stars[sk.id]=Math.max(prev,st);
+    const nxt=L.idx+2,newPlanet=nxt>S.unlocked&&nxt<=SKILLS.length;S.unlocked=Math.max(S.unlocked,Math.min(nxt,SKILLS.length));
+    addXp(L.xp+bonus);rewardStep(r,st+1);save();
+    Object.assign(r,{title:st===3?'Mission parfaite':st===2?'Belle mission':'Mission accomplie',text:`${L.firstTry} réponses justes du premier coup sur ${L.total}.`+(st===1?' Chaque mission rend la suivante plus facile.':'')+(newPlanet?` Nouvelle planète ouverte : ${SKILLS[nxt-1].planet}.`:''),stars:st,xp:L.xp+bonus,expr:st>=2?'cheer':'happy',again:L.idx,win:true});
+  }else if(L.mode==='placement'){
+    const s=L.firstTry,u=s>=11?10:s>=9?8:s>=7?6:s>=5?4:s>=3?2:1;
+    S.placed=true;S.unlocked=Math.max(S.unlocked,u);addXp(L.xp);rewardStep(r,Math.floor(s/3));save();
+    r.title=u>1?`Départ sur ${SKILLS[u-1].planet}`:'On décolle depuis la Lune';
+    r.text=`${s} réponses justes du premier coup sur 12. ${u>1?`Les planètes jusqu'à ${SKILLS[u-1].planet} sont ouvertes.`:'On démarre doucement, et tu iras vite.'}`;
+    r.xp=L.xp;r.expr='cheer';r.win=true;
+  }else{
+    const rec=L.score>S.best;if(rec)S.best=L.score;S.blitzPlays++;const xp=L.score*2;addXp(xp);rewardStep(r,L.score>0?Math.min(4,1+Math.floor(L.score/8)):0);save();
+    Object.assign(r,{title:L.score>0?`${L.score} calculs justes`:'Pas de panique',text:L.score>0?'en 60 secondes.':'Les premiers calculs échauffent. Retente une manche.',xp,expr:L.score>0?'cheer':'happy',rec,blitz:true,win:L.score>0});
+  }
+  if(r.earned&&r.earned.length)r.win=true;
+  showResult(r);
+}
+function showResult(r){
+  const les=lessonEl();
+  les.innerHTML=`<div class="res"><div aria-hidden="true">${mascot(r.expr||'happy',130)}</div>
+   <h1 id="rt" tabindex="-1">${esc(r.title)}</h1>
+   ${r.stars?`<div class="bigstars" role="img" aria-label="${r.stars} étoile${r.stars>1?'s':''} sur 3">${[1,2,3].map(k=>`<span class="${k<=r.stars?'on':''}" style="display:inline-flex">${ICON.star}</span>`).join('')}</div>`:''}
+   ${r.rec?'<div class="newrec">Nouveau record</div>':''}
+   <p>${esc(r.text)}</p>
+   <div class="gains"><div class="gain">${ICON.star}<span>+${r.xp} XP</span></div>${r.cr?`<div class="gain gem">${ICON.gem}<span>+${r.cr} cristal${r.cr>1?'ux':''}</span></div>`:''}<div class="gain"><span style="color:var(--red-l);display:inline-flex">${ICON.flame}</span><span>${streakNow()} jour${streakNow()>1?'s':''}</span></div></div>${r.crBonus?`<p class="small">Dont ${r.crBonus} cristaux de bonus pour ${S.streak} jours de suite.</p>`:''}${r.crCap?(r.crMax?'<p class="small">Tu as atteint le maximum de cristaux pour aujourd\'hui. Reviens demain.</p>':`<p class="small">Après ${S.cap} cristaux dans la journée, chaque mission en rapporte 1.</p>`):''}${r.earned&&r.earned.length?`<div class="rwbanner" role="status"><b>Palier atteint</b><span>${esc(r.earned.join(', '))}</span><span>Va voir dans Trésors.</span></div>`:''}</div>
+   <div class="res actions" style="flex:none;gap:10px"><button class="btn block" data-act="done" id="dn">Continuer</button>${r.blitz?'<button class="btn red block" data-act="blitz">Rejouer</button>':(r.again!==undefined?`<button class="btn ghost block" data-act="start" data-i="${r.again}">Rejouer cette planète</button>`:'')}</div>`;
+  if(r.win){sfx.win();confetti();}
+  const h=$('#rt');if(h)h.focus({preventScroll:true});
+}
+function closeSession(){
+  clearInterval(tmr);L=null;ov.classList.add('closing');
+  setTab(TAB,true);
+  after(240,()=>{if(L)return;ov.hidden=true;ov.innerHTML='';ov.classList.remove('closing');document.documentElement.classList.remove('noscroll');});
+}
+
+/* ---------- confirmation de sortie ---------- */
+function openConfirm(){
+  const les=lessonEl();if(!les||$('.scrim',les))return;
+  if(L&&L.mode==='blitz')L.paused=true,L.remain=Math.max(0,L.endAt-Date.now());
+  ['.l-top','.l-body','.l-input','#sheet'].forEach(s=>{const e=$(s,les);if(e)e.inert=true;});
+  const d=document.createElement('div');d.className='scrim';
+  d.innerHTML=`<div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dq"><div aria-hidden="true">${mascot('kind',80)}</div><h2 id="dq">Quitter la mission ?</h2><p>Ta progression de cette mission sera perdue.</p><button class="btn" data-act="stay" id="stay">Continuer la mission</button><button class="btn ghost" data-act="leave">Quitter</button></div>`;
+  les.appendChild(d);$('#stay').focus();
+}
+function closeConfirm(){
+  const les=lessonEl();if(!les)return;const s=$('.scrim',les);if(!s)return;s.remove();
+  ['.l-top','.l-body','#sheet'].forEach(q=>{const e=$(q,les);if(e)e.inert=false;});
+  const sh=$('#sheet',les);const sheetOpen=sh&&!sh.hidden;const inp=$('#inp',les);if(inp)inp.inert=!!sheetOpen;
+  if(L&&L.mode==='blitz'&&L.paused&&!document.hidden){L.paused=false;L.endAt=Date.now()+L.remain;}
+  const f=sheetOpen?($('#nx',les)||$('#retry',les)):$('.icon-btn',les);if(f)f.focus({preventScroll:true});
+}
+
+/* ---------- événements ---------- */
+const ACT={
+  tab(el){setTab(el.dataset.t);},
+  start(el,e){const r=el.getBoundingClientRect();startSession('lesson',Number(el.dataset.i),e&&e.clientX?e.clientX:r.left+r.width/2,e&&e.clientY?e.clientY:r.top+r.height/2);},
+  place(){startSession('placement');},
+  placeno(){S.placeDismissed=true;save();renderMap();},
+  blitz(){startSession('blitz');},
+  digit(el){digit(el.dataset.d);},del,
+  pick(el){pickChoice(el.dataset.v);},
+  check,
+  next(){advance();},retry,explain,hint(){showHint();},
+  quit(){openConfirm();},stay(){closeConfirm();},
+  leave(){closeConfirm();closeSession();},
+  done(){closeSession();},
+  snd(el){S.sound=!S.sound;save();el.setAttribute('aria-checked',String(S.sound));if(S.sound)sfx.ok();},
+  mo(el){S.reduce=!reduced();save();applyMotion();el.setAttribute('aria-checked',String(reduced()));},
+  reset(el){
+    if(el.dataset.arm){S=defState();cleanRewards();lockParents();save();firstMap=true;applyMotion();setTab('parents');return;}
+    el.dataset.arm='1';const old=el.textContent;el.textContent='Confirmer l\'effacement';el.classList.remove('ghost');el.classList.add('red');
+    setTimeout(()=>{if(el.isConnected){delete el.dataset.arm;el.textContent=old;el.classList.remove('red');el.classList.add('ghost');}},4000);
+  }
+};
+document.addEventListener('click',e=>{
+  const el=e.target.closest('[data-act]');if(!el||el.disabled)return;
+  const f=ACT[el.dataset.act];if(f)f(el,e);
+});
+document.addEventListener('input',e=>{if(e.target.id==='nm'){S.name=e.target.value;save();}});
+document.addEventListener('keydown',e=>{
+  if(!L||ov.hidden)return;
+  if(e.key==='Escape'){e.preventDefault();$('.scrim',ov)?closeConfirm():openConfirm();return;}
+  if($('.scrim',ov))return;
+  const tag=(e.target&&e.target.tagName)||'';
+  if(/^\d$/.test(e.key)&&!L.done){digit(e.key);return;}
+  if(e.key==='Backspace'&&!L.done){del();return;}
+  if(e.key==='Enter'&&tag!=='BUTTON'){e.preventDefault();const sh=$('#sheet');if(sh&&!sh.hidden){const b=$('#nx')||$('#retry');if(b)b.click();}else if(!L.done)check();}
+});
+
+/* ---------- récompenses réelles : une échelle de paliers ---------- */
+const RW_KEYS=['candy','ice','popcorn','pin','ticket','game','book','gift','tent','trophy'];
+const RW_LABEL={candy:'Bonbon',ice:'Glace',popcorn:'Cinéma',pin:'Sortie',ticket:'Billet',game:'Jeu vidéo',book:'Livre',gift:'Cadeau',tent:'Tente',trophy:'Trophée'};
+const IDEAS=[
+ {g:'Petits plaisirs',items:[['Sachet de bonbons','candy',20],['Une glace au choix','ice',20],['Choisir le dessert du dimanche','ice',20],['Choisir le film de la soirée','popcorn',25],['30 minutes de jeu vidéo en plus','game',20]]},
+ {g:'Moments à deux ou en famille',items:[['Une sortie avec papa : Octave choisit où','pin',35],['Soirée jeux de société','gift',30],['Atelier pâtisserie','ice',35],['Dormir sous la tente dans le salon','tent',40],['Inviter un ami à goûter','candy',35]]},
+ {g:'Sorties',items:[['Cinéma','ticket',40],['Piscine ou patinoire','pin',45],['Parc de jeux ou trampoline','pin',50],['Restaurant au choix','popcorn',60],['Une grande sortie : parc d\'attractions ou zoo','pin',80]]},
+ {g:'Grandes récompenses',items:[['Un jeu vidéo','game',40],['Un livre ou une BD au choix','book',50],['Un set de construction','gift',70],['Un grand jouet à choisir','gift',100],['Un week-end spécial à deux','trophy',120]]}
+];
+function defaultLadder(){return[
+ ['Un sachet de bonbons','candy',20],['Une glace ou le dessert de ton choix','ice',25],['Le film de la soirée, avec popcorn','popcorn',30],
+ ['Une sortie avec papa : tu choisis où','pin',35],['Une séance de cinéma','ticket',40],['Un jeu vidéo','game',40],
+ ['Un livre, une BD ou un set de construction','book',70],['Une grande sortie : parc d\'attractions ou zoo','pin',80],
+ ['Un grand jouet à choisir','gift',100],['Un week-end spécial à deux','trophy',120]].map((a,i)=>({id:i+1,name:a[0],icon:a[1],cost:a[2],got:false}));}
+function cleanRewards(){
+  const a=Array.isArray(S.lad)?S.lad:[];
+  S.lad=a.filter(r=>r&&typeof r==='object'&&typeof r.name==='string'&&Number(r.cost)>0).slice(0,30).map((r,i)=>({id:Number(r.id)||(1000+i),name:String(r.name).slice(0,60),icon:RW_KEYS.includes(r.icon)?r.icon:'gift',cost:Math.min(2000,Math.max(1,Math.round(Number(r.cost)))),got:!!r.got}));
+  if(!S.ladInit){S.lad=defaultLadder();S.ladInit=true;}
+  S.cr=Math.max(0,Number(S.cr)||0);S.ladBase=Math.max(0,Number(S.ladBase)||0);S.cycle=Math.max(1,Math.round(Number(S.cycle)||1));
+  if(!S.capV2){S.cap=Math.max(Number(S.cap)||0,10);S.capV2=true;}
+  S.cap=Math.min(20,Math.max(3,Math.round(Number(S.cap)||10)));
+  if(!S.crLog||typeof S.crLog!=='object'||Array.isArray(S.crLog))S.crLog={};
+  if(!S.crDay||typeof S.crDay!=='object')S.crDay={d:'',n:0};
+  if(!Array.isArray(S.hist))S.hist=[];
+  S.hist=S.hist.filter(h=>h&&typeof h.n==='string'&&typeof h.d==='string').slice(0,40);
+  if(typeof S.pin!=='string'||!/^\d{4}$/.test(S.pin))S.pin='';
+}
+cleanRewards();
+const ladProg=()=>Math.max(0,S.cr-S.ladBase);
+function ladder(){
+  let cum=0,prevCum=0;const prog=ladProg();let nextSet=false;
+  return S.lad.map((r,i)=>{prevCum=cum;cum+=r.cost;
+    let st=r.got?'got':prog>=cum?'ready':'lock';
+    const isNext=!nextSet&&st==='lock';if(isNext)nextSet=true;
+    return{r,i,cum,prevCum,st,next:isNext,left:Math.max(0,cum-prog),pct:st==='lock'?Math.max(0,Math.min(1,(prog-prevCum)/r.cost)):1};});
+}
+const ladTotal=()=>S.lad.reduce((a,r)=>a+r.cost,0);
+const pendList=()=>ladder().filter(x=>x.st==='ready');
+const pendTotal=()=>pendList().length;
+function pendSnap(){const m={};pendList().forEach(x=>{m[x.r.id]=1;});return m;}
+function newlyEarned(b){return pendList().filter(x=>!b[x.r.id]).map(x=>x.r);}
+const SOFT=6;
+function crLeftToday(){return S.crDay.d===ymd()?Math.max(0,S.cap+SOFT-S.crDay.n):S.cap+SOFT;}
+function grantCr(n,bypass){
+  const t=ymd();if(S.crDay.d!==t)S.crDay={d:t,n:0};
+  const g=bypass?n:(()=>{const full=Math.max(0,S.cap-S.crDay.n);let x=Math.min(n,full);if(n>x)x+=Math.max(0,Math.min(1,S.cap+SOFT-(S.crDay.n+x)));return x;})();
+  if(!bypass)S.crDay.n+=g;
+  S.cr+=g;S.crLog[t]=(S.crLog[t]||0)+g;
+  const lim=new Date();lim.setDate(lim.getDate()-45);const ls=ymd(lim);
+  Object.keys(S.crLog).forEach(k=>{if(k<ls)delete S.crLog[k];});
+  return g;
+}
+function rate(){
+  let tot=0,act=0;for(let i=0;i<14;i++){const d=new Date();d.setDate(d.getDate()-i);const v=S.crLog[ymd(d)]||0;tot+=v;if(v>0)act++;}
+  return act>=3?Math.max(.8,tot/14):3;
+}
+function etaText(cr){
+  if(cr<=0)return'tout de suite';
+  const days=Math.max(1,Math.ceil(cr/rate()));
+  if(days<=10)return`environ ${days} jour${days>1?'s':''}`;
+  if(days<=45){const w=Math.round(days/7);return`environ ${w} semaine${w>1?'s':''}`;}
+  const m=Math.max(2,Math.round(days/30));return`environ ${m} mois`;
+}
+const pad2=n=>String(n).padStart(2,'0');
+function rdisc(r,big){return`<span class="rwdisc${big?' big':''}" aria-hidden="true">${ICON[r.icon]||ICON.gift}</span>`;}
+const fmtD=d=>{try{const [y,m,j]=d.split('-');const mo=['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'];return`${Number(j)} ${mo[Number(m)-1]}`;}catch(e){return d;}};
+function rungText(x){
+  if(x.st==='got')return'Reçue';
+  if(x.st==='ready')return'Prête. Montre cet écran à ton parent.';
+  return`${x.next?`Encore ${x.left} cristaux, `:`À partir de ${x.cum} cristaux, `}${etaText(x.left)}`;
+}
+
+/* onglet Trésors (enfant) : toute l'échelle, du 1er au dernier palier */
+function renderLoot(){
+  const L2=ladder(),pend=L2.filter(x=>x.st==='ready'),nx=L2.find(x=>x.next);
+  const rungs=L2.map(x=>`<li class="rwcard ${x.st}${x.next?' nxt':''}">${rdisc(x.r)}<div class="rwb"><span class="rwn">Palier ${pad2(x.i+1)} · ${x.cum} cristaux</span><b>${esc(x.r.name)}</b>${x.next?`<div class="meter blue" role="progressbar" aria-label="${esc(x.r.name)}" aria-valuemin="0" aria-valuemax="${x.r.cost}" aria-valuenow="${Math.round(x.pct*x.r.cost)}"><i style="width:${Math.round(x.pct*100)}%"></i></div>`:''}<span class="rwsub">${rungText(x)}</span></div>${x.st==='got'?`<span class="rwtick" aria-hidden="true">${ICON.check}</span>`:x.st==='lock'&&!x.next?`<span class="rwtick dim" aria-hidden="true">${ICON.lock}</span>`:''}</li>`).join('');
+  const hist=S.hist.slice(0,5).map(h=>`<li class="rwhist"><span>${esc(h.n)}</span><span>${fmtD(h.d)}</span></li>`).join('');
+  view.innerHTML=`<header class="top"><div class="hi"><h1>Trésors</h1></div>${chips()}</header>
+  <div class="gemhero"><div class="gembig" aria-hidden="true">${ICON.gem}</div><div><b class="gemn">${S.cr}</b><span> cristaux gagnés</span><p class="small">Aujourd'hui : encore ${crLeftToday()} cristaux possibles</p></div></div>
+  <p class="small" style="margin-top:10px">Chaque mission te rapporte 1 cristal pour l'avoir terminée, plus 1 par étoile gagnée, soit de 2 à 4. Chaque palier atteint te donne une vraie récompense.</p>
+  ${pend.length?`<div class="card readybox" role="status"><b>${pend.length>1?'Des récompenses sont prêtes':'Une récompense est prête'}</b><p class="small" style="color:var(--fg)">Montre cet écran à ton parent. Il la remettra depuis son coin.</p></div>`:''}
+  <h2 class="sr">Échelle des récompenses</h2><ol class="list rwlist" aria-label="Les ${L2.length} paliers, du 1er au dernier">${rungs||'<li><span>Aucun palier pour le moment.</span></li>'}</ol>
+  ${L2.length?`<p class="small" style="margin-top:12px">Au palier ${pad2(L2.length)}, une nouvelle échelle recommence${S.cycle>1?` (échelle numéro ${S.cycle} en cours)`:''}.</p>`:''}
+  ${hist?`<section class="sect"><h2>Déjà reçues</h2><ul class="list">${hist}</ul></section>`:''}`;
+  void nx;
+}
+function nextRewardCard(){
+  const L2=ladder(),pend=L2.filter(x=>x.st==='ready');
+  if(pend.length)return`<button class="card nextrw ready" data-act="tab" data-t="loot">${rdisc(pend[0].r)}<span><b>Une récompense est prête</b><br><span class="small" style="color:var(--fg)">${esc(pend[0].r.name)}. Va voir dans Trésors.</span></span></button>`;
+  const x=L2.find(y=>y.next);if(!x)return'';
+  return`<button class="card nextrw" data-act="tab" data-t="loot">${rdisc(x.r)}<span><b>Palier ${pad2(x.i+1)} : ${esc(x.r.name)}</b><br><span class="small">Encore ${x.left} cristaux, ${etaText(x.left)}</span></span></button>`;
+}
+
+/* coin parents : code, remises, éditeur de l'échelle */
+let parentOK=false,pinBuf='';
+function lockParents(){parentOK=false;pinBuf='';}
+function renderPin(mode){
+  if(mode==='reset'){
+    const a=rnd(12,19),b=rnd(6,9);L_PIN={a,b};
+    view.innerHTML=`<header class="top"><div class="hi"><h1>Code oublié</h1></div></header>
+    <div class="hero"><p>Pour réinitialiser le code, résous ce calcul de grand : <b>${a} ${TIMES} ${b}</b></p><label class="sr" for="pr">Résultat</label><input class="txt" id="pr" inputmode="numeric" autocomplete="off" style="width:160px;text-align:center"><p class="small" id="pmsg" role="alert"></p><button class="btn block" data-act="pinreset" style="max-width:340px">Valider</button><button class="btn ghost block" data-act="pinback" style="max-width:340px">Retour</button></div>`;return;
+  }
+  const dots=[0,1,2,3].map(i=>`<i class="pd${i<pinBuf.length?' on':''}"></i>`).join('');
+  view.innerHTML=`<header class="top"><div class="hi"><h1>Coin parents</h1></div></header>
+  <div class="hero"><p>Cette page est réservée aux parents. Entre le code à 4 chiffres.</p><div class="pins" role="img" aria-label="${pinBuf.length} chiffre${pinBuf.length>1?'s':''} sur 4">${dots}</div><p class="small" id="pmsg" role="alert"></p>
+  <div class="pad pinpad" role="group" aria-label="Clavier du code">${[1,2,3,4,5,6,7,8,9].map(d=>`<button class="key" data-act="pind" data-d="${d}" aria-label="${d}">${d}</button>`).join('')}<button class="key" data-act="pindel" aria-label="Effacer">${ICON.back}</button><button class="key" data-act="pind" data-d="0" aria-label="0">0</button><span></span></div>
+  <button class="btn ghost" data-act="pinforgot" style="min-height:44px;font-size:14px;padding:6px 14px">Code oublié</button></div>`;
+}
+let L_PIN=null;
+function pinDigit(d){
+  if(pinBuf.length>=4)return;pinBuf+=d;
+  if(pinBuf.length<4){renderPin();return;}
+  if(pinBuf===S.pin){parentOK=true;pinBuf='';renderParents();const h=$('h1',view);if(h){h.tabIndex=-1;h.focus({preventScroll:true});}}
+  else{pinBuf='';renderPin();const m=$('#pmsg');if(m)m.textContent='Code incorrect. Réessaie.';}
+}
+function keepScroll(fn){const y=window.scrollY;fn();window.scrollTo(0,y);}
+const SYNCMSG={local:'enregistrée sur cet appareil',sync:'enregistrement en cours',ok:'enregistrée sur le compte, retrouvée sur tous les appareils',err:'serveur injoignable, la progression reste sur cet appareil'};
+function syncLine(){return`<p class="small" id="syncline" role="status">Sauvegarde : ${SYNCMSG[SYNC]}.</p>`;}
+function parentTop(){
+  const rows=pendList().map(x=>`<li>${rdisc(x.r)}<span class="grow"><b>${esc(x.r.name)}</b><br><span class="small">Palier ${pad2(x.i+1)}</span></span><button class="btn sm" data-act="rwgive" data-id="${x.r.id}">Remis</button></li>`).join('');
+  const give=rows?`<section class="sect" aria-labelledby="h-gv"><h2 id="h-gv">À remettre</h2><ul class="list gl">${rows}</ul><p class="small">Touchez Remis une fois la récompense donnée.</p></section>`:'';
+  const pin=S.pin?`<div class="card set"><span>Code activé</span><button class="btn ghost sm" data-act="plock">Verrouiller</button></div>`:`<div class="card"><b>Protège cette page</b><p class="small">Un code à 4 chiffres empêche de modifier les récompenses ou de les marquer comme remises.</p><div class="set"><label for="pin1">Code</label><input class="txt" id="pin1" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]*" autocomplete="off" style="width:120px"></div><button class="btn sm" data-act="pinset" style="margin-top:6px">Enregistrer le code</button><p class="small" id="pinmsg" role="status"></p></div>`;
+  return give+`<section class="sect">${pin}${accountCard()}</section>`;
+}
+function parentRewards(){
+  const L2=ladder();
+  const cards=L2.map(x=>{const r=x.r;return`<div class="card rwedit">
+   <div class="rwhead">${rdisc(r)}<div class="grow"><span class="rwn">Palier ${pad2(x.i+1)} · ${x.cum} cristaux au total</span><input class="txt grow" aria-label="Nom du palier ${x.i+1}" data-rw="${r.id}" data-f="name" value="${esc(r.name)}" maxlength="60"></div></div>
+   <div class="set"><label for="c${r.id}">Cristaux à gagner depuis le palier précédent</label><input class="txt num" id="c${r.id}" type="number" inputmode="numeric" min="1" max="2000" value="${r.cost}" data-rw="${r.id}" data-f="cost"></div>
+   <p class="small">${x.st==='got'?'Déjà remise.':x.st==='ready'?'Prête à remettre.':`Atteint ${etaText(x.left)} au rythme actuel.`}</p>
+   <div class="icons" role="group" aria-label="Icône du palier ${x.i+1}">${RW_KEYS.map(k=>`<button class="ibtn" data-act="rwicon" data-id="${r.id}" data-k="${k}" aria-pressed="${r.icon===k}" aria-label="${RW_LABEL[k]}">${ICON[k]}</button>`).join('')}</div>
+   <div class="rwacts"><button class="btn ghost sm" data-act="rwup" data-id="${r.id}" ${x.i===0?'disabled':''}>Monter</button><button class="btn ghost sm" data-act="rwdown" data-id="${r.id}" ${x.i===L2.length-1?'disabled':''}>Descendre</button><button class="btn ghost sm" data-act="rwdel" data-id="${r.id}">Supprimer</button></div></div>`;}).join('');
+  const ideas=IDEAS.map((g,gi)=>`<h3 class="gh">${g.g}</h3><div class="ideas">${g.items.map((it,ii)=>`<button class="idea" data-act="rwadd" data-g="${gi}" data-i="${ii}">${ICON[it[1]]}<span>${esc(it[0])}<small>${it[2]} cristaux de plus</small></span></button>`).join('')}</div>`).join('');
+  const hist=S.hist.slice(0,8).map(h=>`<li><span>${esc(h.n)}</span><span>${fmtD(h.d)}</span></li>`).join('');
+  const rt=rate().toFixed(1).replace('.',',');
+  return`<section class="sect" aria-labelledby="h-rw"><h2 id="h-rw">Échelle des récompenses</h2>
+   <p class="small">${L2.length} paliers, du 1er au dernier : ${ladTotal()} cristaux au total, soit ${etaText(ladTotal())} au rythme actuel (environ ${rt} cristaux par jour). Les cristaux viennent des missions : 1 pour l'avoir terminée plus 1 par étoile (2 à 4 en tout), jusqu'à ${S.cap} par jour, puis 1 par mission jusqu'à ${S.cap+SOFT}, plus 5 pour un 7ème jour de suite. Après le dernier palier, l'échelle recommence.</p>
+   <button class="btn ghost sm" data-act="tab" data-t="loot">Voir l'échelle comme Octave</button>
+   ${cards||'<p class="small">Aucun palier. Ajoute-en un ci-dessous.</p>'}
+   <details class="card"><summary>Ajouter un palier</summary>${ideas}<button class="btn ghost sm" data-act="rwadd" data-g="-1" style="margin-top:12px">Palier personnalisé</button></details>
+   ${hist?`<h3 class="gh">Déjà remises</h3><ul class="list">${hist}</ul>`:''}
+   <div class="set"><label for="cap">Plafond de cristaux par jour</label><input class="txt num" id="cap" type="number" inputmode="numeric" min="3" max="20" value="${S.cap}" data-cap="1"></div><p class="small">Entre 3 et 20.</p></section>`;
+}
+function rwById(id){return S.lad.find(r=>r.id===Number(id));}
+function ladMove(id,d){const i=S.lad.findIndex(r=>r.id===Number(id)),j=i+d;if(i<0||j<0||j>=S.lad.length)return;[S.lad[i],S.lad[j]]=[S.lad[j],S.lad[i]];save();keepScroll(renderParents);}
+const RWACT={
+  rwgive(el){
+    const r=rwById(el.dataset.id);const x=ladder().find(y=>y.r===r);if(!r||!x||x.st!=='ready')return;
+    r.got=true;S.hist.unshift({d:ymd(),n:r.name,i:r.icon});S.hist=S.hist.slice(0,40);
+    if(S.lad.every(q=>q.got)){S.ladBase+=ladTotal();S.lad.forEach(q=>{q.got=false;});S.cycle++;}
+    save();keepScroll(renderParents);toast('« '+r.name+' » marquée comme remise.');
+  },
+  rwicon(el){const r=rwById(el.dataset.id);if(!r)return;r.icon=el.dataset.k;save();keepScroll(renderParents);},
+  rwup(el){ladMove(el.dataset.id,-1);},rwdown(el){ladMove(el.dataset.id,1);},
+  rwdel(el){if(!el.dataset.arm){el.dataset.arm='1';const old=el.textContent;el.textContent='Confirmer';el.classList.add('red');setTimeout(()=>{if(el.isConnected){delete el.dataset.arm;el.textContent=old;el.classList.remove('red');}},4000);return;}S.lad=S.lad.filter(r=>r.id!==Number(el.dataset.id));save();keepScroll(renderParents);},
+  rwadd(el){
+    if(S.lad.length>=30)return;
+    const gi=Number(el.dataset.g);let n='Nouveau palier',ic='gift',c=50;
+    if(gi>=0){const it=IDEAS[gi].items[Number(el.dataset.i)];n=it[0];ic=it[1];c=it[2];}
+    const id=Math.max(100,...S.lad.map(r=>r.id))+1;
+    S.lad.push({id,name:n,icon:ic,cost:c,got:false});save();keepScroll(renderParents);
+  },
+  pinset(){const v=($('#pin1')||{}).value||'';const m=$('#pinmsg');if(!/^\d{4}$/.test(v)){if(m)m.textContent='Le code doit contenir exactement 4 chiffres.';return;}S.pin=v;parentOK=true;save();keepScroll(renderParents);},
+  plock(){lockParents();renderParents();},
+  pind(el){pinDigit(el.dataset.d);},
+  pindel(){pinBuf=pinBuf.slice(0,-1);renderPin();},
+  pinforgot(){renderPin('reset');},
+  pinback(){renderPin();},
+  pinreset(){const v=Number(($('#pr')||{}).value);if(L_PIN&&v===L_PIN.a*L_PIN.b){S.pin='';parentOK=true;save();renderParents();}else{const m=$('#pmsg');if(m)m.textContent='Ce n\'est pas le bon résultat. Réessaie.';}}
+};
+document.addEventListener('change',e=>{
+  const t=e.target;
+  if(t.dataset&&t.dataset.cap){S.cap=Math.min(20,Math.max(3,Math.round(Number(t.value)||10)));S.capV2=true;save();keepScroll(renderParents);return;}
+  if(t.dataset&&t.dataset.rw&&t.dataset.f==='cost'){
+    const r=rwById(t.dataset.rw);if(!r)return;
+    r.cost=Math.min(2000,Math.max(1,Math.round(Number(t.value)||r.cost)));save();keepScroll(renderParents);
+  }
+});
+document.addEventListener('input',e=>{const t=e.target;if(t.dataset&&t.dataset.rw&&t.dataset.f==='name'){const r=rwById(t.dataset.rw);if(r){r.name=t.value.slice(0,60)||'Récompense';save();}}});
+
+/* ---------- sauvegarde du joueur : appareil + compte (db) ---------- */
+let SYNC='local',dbDoc=null,pushT=null,pushing=false,pushAgain=false;
+/* ---------- compte de sauvegarde (Supabase, adresse e-mail + mot de passe) ---------- */
+const SB_URL='https://swtitwnlujxlnzgzsaze.supabase.co',SB_KEY='sb_publishable_3ndWpDWffo6dX_6Kw46bFA_TpQRWQem',AUTHKEY='missioncalculo.auth';
+let AUTH=null;
+function authLoad(){try{AUTH=JSON.parse(localStorage.getItem(AUTHKEY)||'null');}catch(e){AUTH=null;}if(!(AUTH&&AUTH.at&&AUTH.rt&&AUTH.uid))AUTH=null;}
+function authSave(){try{if(AUTH)localStorage.setItem(AUTHKEY,JSON.stringify(AUTH));else localStorage.removeItem(AUTHKEY);}catch(e){}}
+async function sbReq(path,o,tok){
+  o=o||{};const h=Object.assign({apikey:SB_KEY,'Content-Type':'application/json'},o.headers||{});h.Authorization='Bearer '+(tok||SB_KEY);
+  const ctl=new AbortController(),t=setTimeout(()=>ctl.abort(),12000);
+  try{const r=await fetch(SB_URL+path,Object.assign({},o,{headers:h,signal:ctl.signal}));let j=null;try{j=await r.json();}catch(e){}return{ok:r.ok,status:r.status,j};}
+  finally{clearTimeout(t);}
+}
+function setAuth(j){AUTH={at:j.access_token,rt:j.refresh_token,exp:Date.now()+(Number(j.expires_in)||3600)*1000,uid:(j.user&&j.user.id)||(AUTH&&AUTH.uid),email:(j.user&&j.user.email)||(AUTH&&AUTH.email)};authSave();}
+async function freshToken(){
+  if(!AUTH)return null;
+  if(AUTH.exp-Date.now()>60000)return AUTH.at;
+  const r=await sbReq('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:AUTH.rt})});
+  if(r.ok&&r.j&&r.j.access_token){setAuth(r.j);return AUTH.at;}
+  if(r.status>=400&&r.status<500){AUTH=null;authSave();SYNC='local';}
+  return null;
+}
+async function sbPull(){const tk=await freshToken();if(!tk)throw new Error('auth');const r=await sbReq('/rest/v1/progress?select=data,ts&limit=1',{method:'GET'},tk);if(!r.ok)throw new Error('http');return(Array.isArray(r.j)&&r.j[0])||null;}
+async function sbPush(){const tk=await freshToken();if(!tk)throw new Error('auth');const body=JSON.stringify([{user_id:AUTH.uid,data:JSON.parse(JSON.stringify(S)),ts:Number(S.ts)||Date.now()}]);const r=await sbReq('/rest/v1/progress?on_conflict=user_id',{method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=minimal'},body},tk);if(!r.ok)throw new Error('http');}
+/* login=true : au 1er branchement d'un appareil, la progression la plus riche l'emporte (jamais l'horodatage seul) */
+async function sbSync(login){
+  if(!AUTH)return;
+  try{
+    SYNC='sync';updSync();
+    const row=await sbPull(),rts=row?Number(row.ts)||0:0,ra=row&&row.data?Number(row.data.answered)||0:0;
+    const remoteWins=row&&(login?(ra>(S.answered||0)||(ra===(S.answered||0)&&rts>(S.ts||0))):rts>(S.ts||0));
+    if(remoteWins){if(!L)adopt(row.data);SYNC='ok';}
+    else if(row&&!login&&rts===(S.ts||0)){SYNC='ok';}
+    else if(S.answered>0||S.xp>0||S.cr>0||row){if(login||(S.ts||0)>rts){if(login)S.ts=Date.now();try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}await sbPush();}SYNC='ok';}
+    else SYNC='ok';
+  }catch(e){SYNC=AUTH?'err':'local';}
+  updSync();
+}
+const accMsg=(t,k)=>{const m=$('#accmsg');if(m){m.textContent=t;m.className=k||'';}};
+function accountCard(){
+  if(AUTH)return`<div class="card" id="acc"><h2 class="h-card">Compte de sauvegarde</h2>${syncLine()}<p class="small">Connecté avec ${esc(AUTH.email||'')}. La progression d'Octave se retrouve sur tout téléphone connecté à ce compte, et reste aussi enregistrée sur celui-ci.</p><details><summary class="small">Changer le mot de passe</summary><div class="set"><label for="acn">Nouveau mot de passe</label><input class="txt" id="acn" type="password" autocomplete="new-password" minlength="8" style="width:100%"></div><button class="btn ghost sm" data-act="accpw" style="margin-top:6px">Changer</button></details><button class="btn ghost sm" data-act="accout" style="margin-top:8px">Se déconnecter</button><p id="accmsg" role="alert"></p></div>`;
+  return`<div class="card" id="acc"><h2 class="h-card">Compte de sauvegarde</h2>${syncLine()}<p class="small">Sans compte, la progression reste sur ce téléphone seulement. Avec un compte, elle survit à un changement de téléphone ou à un effacement des données du navigateur.</p><div class="set"><label for="acm">Adresse e-mail</label><input class="txt" id="acm" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" enterkeyhint="next"></div><div class="set"><label for="acp">Mot de passe</label><div class="pw"><input class="txt" id="acp" type="password" autocomplete="current-password" enterkeyhint="go"><button class="btn ghost sm" type="button" data-act="accshow" aria-pressed="false">Afficher</button></div><span class="small">8 caractères minimum.</span></div><p id="accmsg" role="alert"></p><div class="rwacts" style="margin-top:8px"><button class="btn sm" data-act="accin">Se connecter</button><button class="btn ghost sm" data-act="accup">Créer le compte</button></div></div>`;
+}
+const ACCACT={
+  async accin(){
+    const e=(($('#acm')||{}).value||'').trim(),p=($('#acp')||{}).value||'';
+    if(!e||!p){accMsg('Saisis l\'adresse e-mail et le mot de passe.','bad');return;}
+    accMsg('Connexion en cours.');
+    try{const r=await sbReq('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:e,password:p})});
+      if(!r.ok||!r.j||!r.j.access_token){accMsg(r.status>=400&&r.status<500?'Adresse ou mot de passe incorrect.':'Connexion impossible pour le moment.','bad');return;}
+      setAuth(r.j);await sbSync(true);keepScroll(renderParents);
+    }catch(x){accMsg('Serveur injoignable. Réessaie avec du réseau.','bad');}
+  },
+  async accup(){
+    const e=(($('#acm')||{}).value||'').trim(),p=($('#acp')||{}).value||'';
+    if(!e||p.length<8){accMsg('Saisis une adresse e-mail et un mot de passe de 8 caractères minimum.','bad');return;}
+    accMsg('Création en cours.');
+    try{const r=await sbReq('/auth/v1/signup',{method:'POST',body:JSON.stringify({email:e,password:p})});
+      if(!r.ok){accMsg(r.status===422||r.status===400?'Création impossible : adresse déjà utilisée ou mot de passe trop faible.':'Création impossible pour le moment.','bad');return;}
+      if(r.j&&r.j.access_token){setAuth(r.j);await sbSync(true);keepScroll(renderParents);}
+      else accMsg('Un e-mail de confirmation a été envoyé. Confirmez-le, puis revenez vous connecter ici.','good');
+    }catch(x){accMsg('Serveur injoignable. Réessaie avec du réseau.','bad');}
+  },
+  accshow(el){const i=$('#acp');if(!i)return;const sh=i.type==='password';i.type=sh?'text':'password';el.textContent=sh?'Masquer':'Afficher';el.setAttribute('aria-pressed',String(sh));},
+  accout(){AUTH=null;authSave();SYNC='local';keepScroll(renderParents);},
+  async accpw(){
+    const p=($('#acn')||{}).value||'';if(p.length<8){accMsg('8 caractères minimum.','bad');return;}
+    try{const tk=await freshToken();const r=await sbReq('/auth/v1/user',{method:'PUT',body:JSON.stringify({password:p})},tk);accMsg(r.ok?'Mot de passe changé.':'Changement impossible pour le moment.',r.ok?'good':'bad');}catch(x){accMsg('Serveur injoignable.','bad');}
+  }
+};
+function updSync(){const e=$('#syncline');if(e)e.textContent='Sauvegarde : '+SYNCMSG[SYNC]+'.';}
+function schedulePush(){if(!dbDoc&&!AUTH)return;SYNC='sync';updSync();clearTimeout(pushT);pushT=setTimeout(push,700);}
+async function push(){
+  if(!dbDoc&&!AUTH)return;clearTimeout(pushT);
+  if(pushing){pushAgain=true;return;}
+  pushing=true;
+  try{if(dbDoc)await dbDoc.set(JSON.parse(JSON.stringify(S)));if(AUTH)await sbPush();SYNC='ok';}catch(e){SYNC='err';}
+  pushing=false;if(pushAgain){pushAgain=false;schedulePush();}updSync();
+}
+function adopt(o){
+  S=Object.assign(defState(),JSON.parse(JSON.stringify(o)));cleanRewards();
+  try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}
+  applyMotion();if(!L&&ov.hidden)setTab(TAB,false);
+}
+async function initSync(){
+  try{
+    authLoad();if(AUTH)sbSync(false);
+    if(!(window.claude&&typeof claude.use==='function'))return;
+    const db=await claude.use('db');if(!db)return;
+    dbDoc=db.doc('octave/progress');let first=true;
+    const timer=setTimeout(()=>{if(first){SYNC='err';updSync();}},10000);
+    dbDoc.onSnapshot(snap=>{
+      if(snap.metadata.fromCache||snap.metadata.hasPendingWrites)return;
+      clearTimeout(timer);
+      const had=first;first=false;
+      if(!snap.exists){if(had&&(S.answered>0||S.xp>0||S.cr>0)){S.ts=S.ts||Date.now();push();}else SYNC='ok';updSync();return;}
+      const rm=snap.data()||{},rts=Number(rm.ts)||0;
+      if(rts>(S.ts||0)){if(!L)adopt(rm);SYNC='ok';}
+      else if((S.ts||0)>rts){if(had)push();}
+      else SYNC='ok';
+      updSync();
+    },()=>{SYNC='err';updSync();});
+  }catch(e){}
+}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&pushT)push();else if(!document.hidden&&AUTH&&!pushT&&!pushing)sbSync(false);});
+Object.assign(ACT,RWACT,ACCACT);
+
+/* ---------- changement d'adresse : transfert de la progression par lien ---------- */
+const NEWURL='';
+function b64url(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
+function xferUrl(){try{return NEWURL+'#import='+b64url(S);}catch(e){return NEWURL;}}
+function xferCard(){
+  if(!NEWURL)return'';
+  return`<div class="card xfer" role="region" aria-label="Nouvelle adresse"><b>Nouvelle adresse de Mission Calculo</b><p class="small" style="color:var(--fg)">L'application déménage. Touche le bouton pour emmener toute la progression d'Octave.</p><a class="btn sm" data-act="xfer" href="${xferUrl()}" target="_blank" rel="noopener">Transférer la progression</a><details><summary class="small">Le lien ne s'ouvre pas ?</summary><p class="small">Un parent peut copier ce lien à la main et l'ouvrir dans le navigateur.</p><textarea class="txt" readonly rows="3" style="width:100%" aria-label="Lien de transfert">${xferUrl()}</textarea></details></div>`;
+}
+ACT.xfer=el=>{el.href=xferUrl();};
+let IMPORTED=false;
+function importFromHash(){
+  try{
+    const m=/[#&]import=([A-Za-z0-9_-]+)/.exec(location.hash);if(!m)return;
+    const o=JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/-/g,'+').replace(/_/g,'/')))));
+    try{history.replaceState(null,'',location.pathname+location.search);}catch(e){}
+    if(!o||typeof o!=='object'||Array.isArray(o))return;
+    ['stars','sk','facts','daily','crLog','crDay'].forEach(k=>{if(o[k]===null||typeof o[k]!=='object'||Array.isArray(o[k]))delete o[k];});
+    ['lad','hist'].forEach(k=>{if(!Array.isArray(o[k]))delete o[k];});
+    const mine=S.answered>0||S.xp>0||S.cr>0;
+    if(mine&&(Number(o.ts)||0)<(S.ts||0))return;
+    S=Object.assign(defState(),o);cleanRewards();save();IMPORTED=true;
+  }catch(e){}
+}
+function toast(msg){const d=document.createElement('div');d.className='toast';d.setAttribute('role','status');d.textContent=msg;document.body.appendChild(d);setTimeout(()=>d.remove(),6000);}
+importFromHash();
+initSync();
+
+
+/* ---------- démarrage ---------- */
+applyMotion();
+renderNav();setTab('map',false);
+if(IMPORTED)toast('Progression d\'Octave transférée.');
+window.__calculo={SKILLS,genTables,genDouble,genCompl,genAddEasy,genAddMid,genAddHard,genSubEasy,genSubHard,genMix,genTens,genHoles,genProblem,genBoss,genPlacement,makeChoices,state:()=>S,session:()=>L,reset:()=>{S=defState();cleanRewards();},ladder,grantCr,cleanRewards,sync:()=>SYNC};
+})();
+</script>
+
+</body></html>
