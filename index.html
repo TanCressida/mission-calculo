@@ -370,6 +370,16 @@ details.card summary{min-height:48px;display:flex;align-items:center;font:800 17
 #accmsg{margin:8px 0 0;min-height:0}#accmsg:not(:empty){padding:10px 12px;border-radius:12px;background:#2A3A7E;color:var(--fg)}#accmsg.bad{background:#5A1B3A}#accmsg.good{background:#14532D}
 body:has(#sheet:not([hidden])) #hint{display:none}
 .rwacts .btn[data-act=rwdel]{border-color:#FF8A8A;color:#FF8A8A}
+
+.nav[hidden]{display:none}
+.auth{min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:24px 20px}
+.auth-in{width:100%;max-width:400px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.auth h1{font:800 32px/1.1 var(--f-display);margin:4px 0 0}
+.auth-sub{margin:0 0 6px;color:var(--muted);font-size:16px}
+.auth form{width:100%;display:flex;flex-direction:column;gap:14px;text-align:left}
+.fld{display:flex;flex-direction:column;gap:6px}.fld label{font:800 15px var(--f-display)}
+.auth .txt{width:100%}.auth form>.btn{width:100%}.auth .pw .btn{width:auto;min-width:112px}
+.auth #accmsg:empty{display:none}
 </style>
 </head><body>
 
@@ -1163,7 +1173,7 @@ function parentRewards(){
    ${cards||'<p class="small">Aucun palier. Ajoute-en un ci-dessous.</p>'}
    <details class="card"><summary>Ajouter un palier</summary>${ideas}<button class="btn ghost sm" data-act="rwadd" data-g="-1" style="margin-top:12px">Palier personnalisé</button></details>
    ${hist?`<h3 class="gh">Déjà remises</h3><ul class="list">${hist}</ul>`:''}
-   <div class="set"><label for="cap">Plafond de cristaux par jour</label><input class="txt num" id="cap" type="number" inputmode="numeric" min="3" max="20" value="${S.cap}" data-cap="1"></div><p class="small">Entre 3 et 20.</p></section>`;
+   <div class="set"><label for="cap">Plafond de cristaux par jour</label><input class="txt num" id="cap" type="number" inputmode="numeric" min="3" max="20" value="${S.cap}" data-cap="1"></div><p class="small">Entre 3 et 20.</p>${AUTH?'':syncLine()}</section>`;
 }
 function rwById(id){return S.lad.find(r=>r.id===Number(id));}
 function ladMove(id,d){const i=S.lad.findIndex(r=>r.id===Number(id)),j=i+d;if(i<0||j<0||j>=S.lad.length)return;[S.lad[i],S.lad[j]]=[S.lad[j],S.lad[i]];save();keepScroll(renderParents);}
@@ -1221,7 +1231,7 @@ async function freshToken(){
   if(AUTH.exp-Date.now()>60000)return AUTH.at;
   const r=await sbReq('/auth/v1/token?grant_type=refresh_token',{method:'POST',body:JSON.stringify({refresh_token:AUTH.rt})});
   if(r.ok&&r.j&&r.j.access_token){setAuth(r.j);return AUTH.at;}
-  if(r.status>=400&&r.status<500){AUTH=null;authSave();SYNC='local';}
+  if(r.status>=400&&r.status<500&&r.status!==429){AUTH=null;authSave();SYNC='local';setTimeout(()=>{if(!AUTH&&!L)showAuth();},0);}
   return null;
 }
 async function sbPull(){const tk=await freshToken();if(!tk)throw new Error('auth');const r=await sbReq('/rest/v1/progress?select=data,ts&limit=1',{method:'GET'},tk);if(!r.ok)throw new Error('http');return(Array.isArray(r.j)&&r.j[0])||null;}
@@ -1243,7 +1253,7 @@ async function sbSync(login){
 const accMsg=(t,k)=>{const m=$('#accmsg');if(m){m.textContent=t;m.className=k||'';}};
 function accountCard(){
   if(AUTH)return`<div class="card" id="acc"><h2 class="h-card">Compte de sauvegarde</h2>${syncLine()}<p class="small">Connecté avec ${esc(AUTH.email||'')}. La progression d'Octave se retrouve sur tout téléphone connecté à ce compte, et reste aussi enregistrée sur celui-ci.</p><details><summary class="small">Changer le mot de passe</summary><div class="set"><label for="acn">Nouveau mot de passe</label><input class="txt" id="acn" type="password" autocomplete="new-password" minlength="8" style="width:100%"></div><button class="btn ghost sm" data-act="accpw" style="margin-top:6px">Changer</button></details><button class="btn ghost sm" data-act="accout" style="margin-top:8px">Se déconnecter</button><p id="accmsg" role="alert"></p></div>`;
-  return`<div class="card" id="acc"><h2 class="h-card">Compte de sauvegarde</h2>${syncLine()}<p class="small">Sans compte, la progression reste sur ce téléphone seulement. Avec un compte, elle survit à un changement de téléphone ou à un effacement des données du navigateur.</p><div class="set"><label for="acm">Adresse e-mail</label><input class="txt" id="acm" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" enterkeyhint="next"></div><div class="set"><label for="acp">Mot de passe</label><div class="pw"><input class="txt" id="acp" type="password" autocomplete="current-password" enterkeyhint="go"><button class="btn ghost sm" type="button" data-act="accshow" aria-pressed="false">Afficher</button></div><span class="small">8 caractères minimum.</span></div><p id="accmsg" role="alert"></p><div class="rwacts" style="margin-top:8px"><button class="btn sm" data-act="accin">Se connecter</button><button class="btn ghost sm" data-act="accup">Créer le compte</button></div></div>`;
+  return'';
 }
 const ACCACT={
   async accin(){
@@ -1252,7 +1262,7 @@ const ACCACT={
     accMsg('Connexion en cours.');
     try{const r=await sbReq('/auth/v1/token?grant_type=password',{method:'POST',body:JSON.stringify({email:e,password:p})});
       if(!r.ok||!r.j||!r.j.access_token){accMsg(r.status>=400&&r.status<500?'Adresse ou mot de passe incorrect.':'Connexion impossible pour le moment.','bad');return;}
-      setAuth(r.j);await sbSync(true);keepScroll(renderParents);
+      setAuth(r.j);await enterApp();
     }catch(x){accMsg('Serveur injoignable. Réessaie avec du réseau.','bad');}
   },
   async accup(){
@@ -1261,12 +1271,12 @@ const ACCACT={
     accMsg('Création en cours.');
     try{const r=await sbReq('/auth/v1/signup',{method:'POST',body:JSON.stringify({email:e,password:p})});
       if(!r.ok){accMsg(r.status===422||r.status===400?'Création impossible : adresse déjà utilisée ou mot de passe trop faible.':'Création impossible pour le moment.','bad');return;}
-      if(r.j&&r.j.access_token){setAuth(r.j);await sbSync(true);keepScroll(renderParents);}
+      if(r.j&&r.j.access_token){setAuth(r.j);await enterApp();}
       else accMsg('Un e-mail de confirmation a été envoyé. Confirmez-le, puis revenez vous connecter ici.','good');
     }catch(x){accMsg('Serveur injoignable. Réessaie avec du réseau.','bad');}
   },
   accshow(el){const i=$('#acp');if(!i)return;const sh=i.type==='password';i.type=sh?'text':'password';el.textContent=sh?'Masquer':'Afficher';el.setAttribute('aria-pressed',String(sh));},
-  accout(){AUTH=null;authSave();SYNC='local';keepScroll(renderParents);},
+  accout(){AUTH=null;authSave();SYNC='local';showAuth();},
   async accpw(){
     const p=($('#acn')||{}).value||'';if(p.length<8){accMsg('8 caractères minimum.','bad');return;}
     try{const tk=await freshToken();const r=await sbReq('/auth/v1/user',{method:'PUT',body:JSON.stringify({password:p})},tk);accMsg(r.ok?'Mot de passe changé.':'Changement impossible pour le moment.',r.ok?'good':'bad');}catch(x){accMsg('Serveur injoignable.','bad');}
@@ -1309,6 +1319,31 @@ async function initSync(){
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&pushT)push();else if(!document.hidden&&AUTH&&!pushT&&!pushing)sbSync(false);});
 Object.assign(ACT,RWACT,ACCACT);
 
+/* ---------- écran de connexion : obligatoire, adresse e-mail + mot de passe ---------- */
+const GATED=!window.__NOGATE;
+function showAuth(){
+  closeSessionSafe();
+  nav.hidden=true;nav.innerHTML='';
+  view.innerHTML=`<div class="auth"><div class="auth-in"><div aria-hidden="true">${mascot('happy',96)}</div>
+   <h1>Mission Calculo</h1>
+   <p class="auth-sub">Connecte-toi pour retrouver ta progression sur tous tes appareils.</p>
+   <form id="authf" novalidate>
+    <div class="fld"><label for="acm">Adresse e-mail</label><input class="txt" id="acm" type="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" enterkeyhint="next"></div>
+    <div class="fld"><label for="acp">Mot de passe</label><div class="pw"><input class="txt" id="acp" type="password" autocomplete="current-password" enterkeyhint="go"><button class="btn ghost sm" type="button" data-act="accshow" aria-pressed="false">Afficher</button></div></div>
+    <p id="accmsg" role="alert"></p>
+    <button class="btn" type="submit" id="accgo">Se connecter</button>
+    <button class="btn ghost" type="button" data-act="accup">Créer un compte</button>
+   </form></div></div>`;
+  const f=$('#authf');if(f)f.addEventListener('submit',e=>{e.preventDefault();ACCACT.accin();});
+}
+function closeSessionSafe(){try{if(typeof closeSession==='function'&&L)closeSession();}catch(e){}}
+async function enterApp(){
+  if(S.owner&&S.owner!==AUTH.uid){S=defState();cleanRewards();}
+  S.owner=AUTH.uid;
+  await sbSync(true);
+  if(S.owner!==AUTH.uid)S.owner=AUTH.uid;
+  save();nav.hidden=false;renderNav();setTab('map',false);
+}
 /* ---------- changement d'adresse : transfert de la progression par lien ---------- */
 const NEWURL='';
 function b64url(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');}
@@ -1339,7 +1374,7 @@ initSync();
 
 /* ---------- démarrage ---------- */
 applyMotion();
-renderNav();setTab('map',false);
+if(GATED&&!AUTH)showAuth();else{if(AUTH&&!S.owner)S.owner=AUTH.uid;renderNav();setTab('map',false);}
 if(IMPORTED)toast('Progression d\'Octave transférée.');
 window.__calculo={SKILLS,genTables,genDouble,genCompl,genAddEasy,genAddMid,genAddHard,genSubEasy,genSubHard,genMix,genTens,genHoles,genProblem,genBoss,genPlacement,makeChoices,state:()=>S,session:()=>L,reset:()=>{S=defState();cleanRewards();},ladder,grantCr,cleanRewards,sync:()=>SYNC};
 })();
