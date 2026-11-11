@@ -937,7 +937,7 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 /* ---------- fin de séance ---------- */
-function rewardStep(r,n){const b=pendSnap(),nd=touchStreak();let bonus=0;if(nd&&S.streak>0&&S.streak%7===0)bonus=5;const g=grantCr(n);if(bonus)grantCr(bonus,true);r.cr=g+bonus;r.crBonus=bonus;r.crCap=n>0&&g<n;r.crMax=S.crDay.n>=S.cap+SOFT;r.earned=newlyEarned(b).map(x=>x.name);}
+function rewardStep(r,n){const b=pendSnap(),nd=touchStreak();let bonus=0;if(nd&&S.streak>0&&S.streak%7===0)bonus=5;const g=grantCr(n);if(bonus)grantCr(bonus,true);r.cr=g+bonus;r.crBonus=bonus;r.earned=newlyEarned(b).map(x=>x.name);}
 function finish(){
   if(!L||L.done)return;L.done=true;clearInterval(tmr);
   const r={};
@@ -967,7 +967,7 @@ function showResult(r){
    ${r.stars?`<div class="bigstars" role="img" aria-label="${r.stars} étoile${r.stars>1?'s':''} sur 3">${[1,2,3].map(k=>`<span class="${k<=r.stars?'on':''}" style="display:inline-flex">${ICON.star}</span>`).join('')}</div>`:''}
    ${r.rec?'<div class="newrec">Nouveau record</div>':''}
    <p>${esc(r.text)}</p>
-   <div class="gains"><div class="gain">${ICON.star}<span>+${r.xp} XP</span></div>${r.cr?`<div class="gain gem">${ICON.gem}<span>+${r.cr} cristal${r.cr>1?'ux':''}</span></div>`:''}<div class="gain"><span style="color:var(--red-l);display:inline-flex">${ICON.flame}</span><span>${streakNow()} jour${streakNow()>1?'s':''}</span></div></div>${r.crBonus?`<p class="small">Dont ${r.crBonus} cristaux de bonus pour ${S.streak} jours de suite.</p>`:''}${r.crCap?(r.crMax?'<p class="small">Tu as atteint le maximum de cristaux pour aujourd\'hui. Reviens demain.</p>':`<p class="small">Après ${S.cap} cristaux dans la journée, chaque mission en rapporte 1.</p>`):''}${r.earned&&r.earned.length?`<div class="rwbanner" role="status"><b>Palier atteint</b><span>${esc(r.earned.join(', '))}</span><span>Va voir dans Trésors.</span></div>`:''}</div>
+   <div class="gains"><div class="gain">${ICON.star}<span>+${r.xp} XP</span></div>${r.cr?`<div class="gain gem">${ICON.gem}<span>+${r.cr} cristal${r.cr>1?'ux':''}</span></div>`:''}<div class="gain"><span style="color:var(--red-l);display:inline-flex">${ICON.flame}</span><span>${streakNow()} jour${streakNow()>1?'s':''}</span></div></div>${r.crBonus?`<p class="small">Dont ${r.crBonus} cristaux de bonus pour ${S.streak} jours de suite.</p>`:''}${r.earned&&r.earned.length?`<div class="rwbanner" role="status"><b>Palier atteint</b><span>${esc(r.earned.join(', '))}</span><span>Va voir dans Trésors.</span></div>`:''}</div>
    <div class="res actions" style="flex:none;gap:10px"><button class="btn block" data-act="done" id="dn">Continuer</button>${r.blitz?'<button class="btn red block" data-act="blitz">Rejouer</button>':(r.again!==undefined?`<button class="btn ghost block" data-act="start" data-i="${r.again}">Rejouer cette planète</button>`:'')}</div>`;
   if(r.win){sfx.win();confetti();}
   const h=$('#rt');if(h)h.focus({preventScroll:true});
@@ -1077,7 +1077,7 @@ const SOFT=6;
 function crLeftToday(){return S.crDay.d===ymd()?Math.max(0,S.cap+SOFT-S.crDay.n):S.cap+SOFT;}
 function grantCr(n,bypass){
   const t=ymd();if(S.crDay.d!==t)S.crDay={d:t,n:0};
-  const g=bypass?n:(()=>{const full=Math.max(0,S.cap-S.crDay.n);let x=Math.min(n,full);if(n>x)x+=Math.max(0,Math.min(1,S.cap+SOFT-(S.crDay.n+x)));return x;})();
+  const g=n;
   if(!bypass)S.crDay.n+=g;
   S.cr+=g;S.crLog[t]=(S.crLog[t]||0)+g;
   const lim=new Date();lim.setDate(lim.getDate()-45);const ls=ymd(lim);
@@ -1110,7 +1110,7 @@ function renderLoot(){
   const rungs=L2.map(x=>`<li class="rwcard ${x.st}${x.next?' nxt':''}">${rdisc(x.r)}<div class="rwb"><span class="rwn">Palier ${pad2(x.i+1)} · ${x.cum} cristaux</span><b>${esc(x.r.name)}</b>${x.next?`<div class="meter blue" role="progressbar" aria-label="${esc(x.r.name)}" aria-valuemin="0" aria-valuemax="${x.r.cost}" aria-valuenow="${Math.round(x.pct*x.r.cost)}"><i style="width:${Math.round(x.pct*100)}%"></i></div>`:''}<span class="rwsub">${rungText(x)}</span></div>${x.st==='got'?`<span class="rwtick" aria-hidden="true">${ICON.check}</span>`:x.st==='lock'&&!x.next?`<span class="rwtick dim" aria-hidden="true">${ICON.lock}</span>`:''}</li>`).join('');
   const hist=S.hist.slice(0,5).map(h=>`<li class="rwhist"><span>${esc(h.n)}</span><span>${fmtD(h.d)}</span></li>`).join('');
   view.innerHTML=`<header class="top"><div class="hi"><h1>Trésors</h1></div>${chips()}</header>
-  <div class="gemhero"><div class="gembig" aria-hidden="true">${ICON.gem}</div><div><b class="gemn">${S.cr}</b><span> cristaux gagnés</span><p class="small">Aujourd'hui : encore ${crLeftToday()} cristaux possibles</p></div></div>
+  <div class="gemhero"><div class="gembig" aria-hidden="true">${ICON.gem}</div><div><b class="gemn">${S.cr}</b><span> cristaux gagnés</span></div></div>
   <p class="small" style="margin-top:10px">Chaque mission te rapporte 1 cristal pour l'avoir terminée, plus 1 par étoile gagnée, soit de 2 à 4. Chaque palier atteint te donne une vraie récompense.</p>
   ${pend.length?`<div class="card readybox" role="status"><b>${pend.length>1?'Des récompenses sont prêtes':'Une récompense est prête'}</b><p class="small" style="color:var(--fg)">Montre cet écran à ton parent. Il la remettra depuis son coin.</p></div>`:''}
   <h2 class="sr">Échelle des récompenses</h2><ol class="list rwlist" aria-label="Les ${L2.length} paliers, du 1er au dernier">${rungs||'<li><span>Aucun palier pour le moment.</span></li>'}</ol>
@@ -1168,12 +1168,12 @@ function parentRewards(){
   const hist=S.hist.slice(0,8).map(h=>`<li><span>${esc(h.n)}</span><span>${fmtD(h.d)}</span></li>`).join('');
   const rt=rate().toFixed(1).replace('.',',');
   return`<section class="sect" aria-labelledby="h-rw"><h2 id="h-rw">Échelle des récompenses</h2>
-   <p class="small">${L2.length} paliers, du 1er au dernier : ${ladTotal()} cristaux au total, soit ${etaText(ladTotal())} au rythme actuel (environ ${rt} cristaux par jour). Les cristaux viennent des missions : 1 pour l'avoir terminée plus 1 par étoile (2 à 4 en tout), jusqu'à ${S.cap} par jour, puis 1 par mission jusqu'à ${S.cap+SOFT}, plus 5 pour un 7ème jour de suite. Après le dernier palier, l'échelle recommence.</p>
+   <p class="small">${L2.length} paliers, du 1er au dernier : ${ladTotal()} cristaux au total, soit ${etaText(ladTotal())} au rythme actuel (environ ${rt} cristaux par jour). Les cristaux viennent des missions : 1 pour l'avoir terminée plus 1 par étoile (2 à 4 en tout), sans plafond par jour, plus 5 pour un 7ème jour de suite. Après le dernier palier, l'échelle recommence.</p>
    <button class="btn ghost sm" data-act="tab" data-t="loot">Voir l'échelle comme Octave</button>
    ${cards||'<p class="small">Aucun palier. Ajoute-en un ci-dessous.</p>'}
    <details class="card"><summary>Ajouter un palier</summary>${ideas}<button class="btn ghost sm" data-act="rwadd" data-g="-1" style="margin-top:12px">Palier personnalisé</button></details>
    ${hist?`<h3 class="gh">Déjà remises</h3><ul class="list">${hist}</ul>`:''}
-   <div class="set"><label for="cap">Plafond de cristaux par jour</label><input class="txt num" id="cap" type="number" inputmode="numeric" min="3" max="20" value="${S.cap}" data-cap="1"></div><p class="small">Entre 3 et 20.</p>${AUTH?'':syncLine()}</section>`;
+   ${AUTH?'':syncLine()}</section>`;
 }
 function rwById(id){return S.lad.find(r=>r.id===Number(id));}
 function ladMove(id,d){const i=S.lad.findIndex(r=>r.id===Number(id)),j=i+d;if(i<0||j<0||j>=S.lad.length)return;[S.lad[i],S.lad[j]]=[S.lad[j],S.lad[i]];save();keepScroll(renderParents);}
@@ -1204,7 +1204,6 @@ const RWACT={
 };
 document.addEventListener('change',e=>{
   const t=e.target;
-  if(t.dataset&&t.dataset.cap){S.cap=Math.min(20,Math.max(3,Math.round(Number(t.value)||10)));S.capV2=true;save();keepScroll(renderParents);return;}
   if(t.dataset&&t.dataset.rw&&t.dataset.f==='cost'){
     const r=rwById(t.dataset.rw);if(!r)return;
     r.cost=Math.min(2000,Math.max(1,Math.round(Number(t.value)||r.cost)));save();keepScroll(renderParents);
