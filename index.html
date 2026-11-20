@@ -1042,18 +1042,19 @@ const IDEAS=[
  {g:'Grandes récompenses',items:[['Un jeu vidéo','game',40],['Un livre ou une BD au choix','book',50],['Un set de construction','gift',70],['Un grand jouet à choisir','gift',100],['Un week-end spécial à deux','trophy',120]]}
 ];
 function defaultLadder(){return[
- ['Un sachet de bonbons','candy',20],['Une glace ou le dessert de ton choix','ice',25],['Un jeu vidéo','game',30],
+ ['Un sachet de bonbons','candy',15],['Une glace ou le dessert de ton choix','ice',15],['Un jeu vidéo','game',30],
  ['Le film de la soirée, avec popcorn','popcorn',30],['Une sortie avec papa : tu choisis où','pin',35],['Une séance de cinéma','ticket',40],
  ['Un livre, une BD ou un set de construction','book',70],['Une grande sortie : parc d\'attractions ou zoo','pin',80],
  ['Un grand jouet à choisir','gift',100],['Un week-end spécial à deux','trophy',120]].map((a,i)=>({id:i+1,name:a[0],icon:a[1],cost:a[2],got:false}));}
-/* Migration v2 de l'échelle : le jeu vidéo passe vers 75 cristaux cumulés.
+/* Migration v3 de l'échelle : le jeu vidéo passe à 60 cristaux cumulés.
+   Une sauvegarde déjà migrée en v2 est reprise de la même façon (la v3 ne dépend pas de la v2).
    Les paliers déjà gagnés ou débloqués (prefixe) ne bougent pas : ni ordre, ni coût, ni statut. */
 let LAD_DIRTY=false;
-const LAD_GAME='Un jeu vidéo',LAD_T=75,LAD_MIN=15,LAD_MARGIN=25;
+const LAD_GAME='Un jeu vidéo',LAD_T=60,LAD_MIN=15,LAD_MARGIN=25;
 const LAD_OLD={'Un sachet de bonbons':20,'Une glace ou le dessert de ton choix':25,'Le film de la soirée, avec popcorn':30,'Une sortie avec papa : tu choisis où':35,'Une séance de cinéma':40,'Un jeu vidéo':40,'Un livre, une BD ou un set de construction':70,'Une grande sortie : parc d\'attractions ou zoo':80,'Un grand jouet à choisir':100,'Un week-end spécial à deux':120};
 function migrateLadder(){
-  if(S.ladV===2)return false;
-  S.ladV=2;
+  if(S.ladV===3)return false;
+  S.ladV=3;
   const L=S.lad;if(!Array.isArray(L)||!L.length)return true;
   const prog=Math.max(0,(Number(S.cr)||0)-(Number(S.ladBase)||0));
   let cum=0,last=-1;
@@ -1069,7 +1070,7 @@ function migrateLadder(){
   const g=ord.find(r=>r.name===LAD_GAME);
   if(g){
     ord=ord.filter(r=>r!==g);
-    const mod=g.cost!==LAD_OLD[LAD_GAME],need=mod?g.cost:LAD_MARGIN;
+    const mod=g.cost>60&&g.cost!==LAD_OLD[LAD_GAME],need=mod?g.cost:LAD_MARGIN;
     let c=pre.reduce((a,r)=>a+r.cost,0),k=0;
     while(k<ord.length&&c+ord[k].cost+need<=LAD_T){c+=ord[k].cost;k++;}
     if(!mod)g.cost=Math.max(LAD_MIN,Math.min(60,LAD_T-c));
@@ -1081,7 +1082,7 @@ function migrateLadder(){
 function cleanRewards(){
   const a=Array.isArray(S.lad)?S.lad:[];
   S.lad=a.filter(r=>r&&typeof r==='object'&&typeof r.name==='string'&&Number(r.cost)>0).slice(0,30).map((r,i)=>({id:Number(r.id)||(1000+i),name:String(r.name).slice(0,60),icon:RW_KEYS.includes(r.icon)?r.icon:'gift',cost:Math.min(2000,Math.max(1,Math.round(Number(r.cost)))),got:!!r.got}));
-  if(!S.ladInit){S.lad=defaultLadder();S.ladInit=true;S.ladV=2;}
+  if(!S.ladInit){S.lad=defaultLadder();S.ladInit=true;S.ladV=3;}
   S.cr=Math.max(0,Number(S.cr)||0);S.ladBase=Math.max(0,Number(S.ladBase)||0);S.cycle=Math.max(1,Math.round(Number(S.cycle)||1));
   if(!S.capV2){S.cap=Math.max(Number(S.cap)||0,10);S.capV2=true;}
   S.cap=Math.min(20,Math.max(3,Math.round(Number(S.cap)||10)));
@@ -1090,7 +1091,7 @@ function cleanRewards(){
   if(!Array.isArray(S.hist))S.hist=[];
   S.hist=S.hist.filter(h=>h&&typeof h.n==='string'&&typeof h.d==='string').slice(0,40);
   if(typeof S.pin!=='string'||!/^\d{4}$/.test(S.pin))S.pin='';
-  if(S.ladV!==2&&migrateLadder())LAD_DIRTY=true;
+  if(S.ladV!==3&&migrateLadder())LAD_DIRTY=true;
 }
 cleanRewards();
 if(LAD_DIRTY){LAD_DIRTY=false;try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
